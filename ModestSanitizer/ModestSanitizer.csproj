@@ -42,13 +42,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="NormalizeOrLimit.cs" />
+    <Compile Include="Truncate.cs" />
     <Compile Include="MinMax.cs" />
     <Compile Include="Sanitizer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SanitizerException.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MIT_license.txt" />

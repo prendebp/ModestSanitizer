@@ -75,23 +75,24 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_TruncateToValidLength()
         {
-            String result = Sanitizer.TruncateToValidLength("testBigger", 4);
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+            String result = sanitizer.Truncate.TruncateToValidLength("testBigger", 4);
 
             Assert.AreEqual("test", result);
 
-            String result2 = Sanitizer.TruncateToValidLength("test", 4);
+            String result2 = sanitizer.Truncate.TruncateToValidLength("test", 4);
 
             Assert.AreEqual("test", result2);
 
-            String result3 = Sanitizer.TruncateToValidLength("testSmaller", 50);
+            String result3 = sanitizer.Truncate.TruncateToValidLength("testSmaller", 50);
 
             Assert.AreEqual("testSmaller", result3);
 
-            String resultNull = Sanitizer.TruncateToValidLength(null, 50);
+            String resultNull = sanitizer.Truncate.TruncateToValidLength(null, 50);
 
             Assert.AreEqual(null, resultNull);
 
-            String resultStrEmpty = Sanitizer.TruncateToValidLength(String.Empty, 50);
+            String resultStrEmpty = sanitizer.Truncate.TruncateToValidLength(String.Empty, 50);
 
             Assert.AreEqual(String.Empty, resultStrEmpty);
         }
@@ -99,7 +100,8 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_NormalizeUnicode()
         {
-            String result = Sanitizer.NormalizeUnicode("äiti");
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+            String result = sanitizer.NormalizeOrLimit.NormalizeUnicode("äiti");
 
             //Normalize to the nfkc format of Unicode
             Assert.AreEqual("\u00e4\u0069\u0074\u0069", result); //'äiti' in unicode characters of nfkc normalization form.
@@ -111,7 +113,7 @@ namespace ModestSanitizerUnitTests
 
             //The idea here is to have a reliable whitelist (for comparison purposes)
             String potentiallyMaliciousString = "script";
-            String normalizedString = Sanitizer.NormalizeUnicode(potentiallyMaliciousString); //normalize to nfkc format
+            String normalizedString = sanitizer.NormalizeOrLimit.NormalizeUnicode(potentiallyMaliciousString); //normalize to nfkc format
 
             String whitelist = "\u0073\u0063\u0072\u0069\u0070\u0074"; //'script' in unicode characters of nfkc normalization form.
 
@@ -121,12 +123,14 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_LimitToASCIIOnly()
         {
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+
             //Another approach to have a reliable whitelist (for comparison purposes)
             String potentiallyMaliciousString = "äiti®";
 
             //The idea here is to limit the string of UTF-8 characters to 
             //just the subset of unicode chars that "matches" ASCII characters.
-            String stringLimitedToLetterlikeChars = Sanitizer.LimitToASCIIOnly(potentiallyMaliciousString);
+            String stringLimitedToLetterlikeChars = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString);
 
             //Removes the accent from the 'a', but removes the copyright symbol altogether
             Assert.AreEqual("aiti", stringLimitedToLetterlikeChars); //compare
@@ -135,16 +139,16 @@ namespace ModestSanitizerUnitTests
 
             //The idea here is to limit the string of UTF-8 characters to 
             //just the subset of unicode chars that "matches" ASCII characters.
-            String stringLimitedToLetterlikeChars2 = Sanitizer.LimitToASCIIOnly(potentiallyMaliciousString2);
+            String stringLimitedToLetterlikeChars2 = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString2);
 
-            //Removes the accent from the 'a', but removes the copyright symbol altogether
+            //Removes the accent from the 'a'
             Assert.AreEqual(@"&euml;,a,&ccedil;,!@#$%^%&*(*)__+~!`';,./<>\|}{-=/*-+.,./?", stringLimitedToLetterlikeChars2); //compare
              
             String potentiallyMaliciousString3 = "U, Ù, Ú, Û, ñ, Ü, Ů, ç, Ő";
                                                      
             //The idea here is to limit the string of UTF-8 characters to 
             //just the subset of unicode chars that "matches" ASCII characters.
-            String stringLimitedToLetterlikeChars3 = Sanitizer.LimitToASCIIOnly(potentiallyMaliciousString3);
+            String stringLimitedToLetterlikeChars3 = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString3);
 
             //Removes the accent from the 'a', but removes the copyright symbol altogether
             Assert.AreEqual("U, U, U, U, n, U, U, c, O", stringLimitedToLetterlikeChars3); //compare
@@ -153,9 +157,9 @@ namespace ModestSanitizerUnitTests
 
             //The idea here is to limit the string of UTF-8 characters to 
             //just the subset of unicode chars that "matches" ASCII characters.
-            String stringLimitedToLetterlikeChars4 = Sanitizer.LimitToASCIIOnly(potentiallyMaliciousString4);
+            String stringLimitedToLetterlikeChars4 = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString4);
 
-            //Removes the accent from the 'a', but removes the copyright symbol altogether
+            //Removes the accent marks
             Assert.AreEqual("E,E,E,E,U,U,I,I,A,A,O,e,e,e,e,u,u,i,i,a,a,o", stringLimitedToLetterlikeChars4); //compare
         }
     }

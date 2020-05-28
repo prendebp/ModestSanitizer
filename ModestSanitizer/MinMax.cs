@@ -8,11 +8,13 @@ using static ModestSanitizer.Sanitizer;
 namespace ModestSanitizer
 {
     /// <summary>
-    ///  0. ReduceToValidValue (e.g. max value of a number)
+    ///  MinMax = 1
+    ///  ReduceToValidValue (e.g. max value of a number)
     //   Why? To protect against buffer overflow attacks, e.g. if using unsafe keyword: https://stackoverflow.com/questions/9343665/are-buffer-overflow-exploits-possible-in-c
     /// </summary>
     public class MinMax
     {
+        public Truncate Truncate { get; set; }
         public SaniApproach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
@@ -25,8 +27,9 @@ namespace ModestSanitizer
             SanitizerApproach = sanitizerApproach;
         }
 
-        public MinMax(SaniApproach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
+        public MinMax(Truncate truncate, SaniApproach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
         {
+            Truncate = truncate;
             SaniExceptions = saniExceptions;
         }
 
@@ -83,7 +86,7 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackorThrowException(longToClean, ex);
+                TrackOrThrowException(longToClean, ex);
             }
             return tmpResult;
         }
@@ -141,7 +144,7 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackorThrowException(decimalToClean, ex);
+                TrackOrThrowException(decimalToClean, ex);
             }
             return tmpResult;
         }
@@ -199,14 +202,14 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackorThrowException(intToClean, ex);
+                TrackOrThrowException(intToClean, ex);
             }
             return tmpResult;
         }
         
-        private void TrackorThrowException(string valToClean, Exception ex)
+        private void TrackOrThrowException(string valToClean, Exception ex)
         {
-            string exceptionValue = TruncateToValidLength(valToClean, 5);
+            string exceptionValue = Truncate.TruncateToValidLength(valToClean, 5);
 
             if (SanitizerApproach == SaniApproach.TrackExceptionsInList)
             {

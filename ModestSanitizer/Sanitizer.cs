@@ -11,27 +11,13 @@ namespace ModestSanitizer
     //   REASONABLY SECURE GENERAL PURPOSE LIBRARY TO SANITIZE INPUT THAT DOES NOT REQUIRE OUTPUT ENCODING.
     //   For output encoding see Anti-XSS
     //   For LDAP encoding see Anti-XSS
+    //
+    //   This library is to encourage basic sanitization of any externally input data coming into any C# .NET app of any kind . . . 
+    //   It's likely a good practice to do things like check values against a valid whitelist or log exceptions if a hacker tries to pass in bad arguments.
+    //   This isn't meant to be perfect but to be a reasonably secure, modest sanitizer to encourage good and regular discipline by developers.
 
-    //DATE FORMATTING:    ISO 8601 (yyyy-MM-dd'T'HH:mm:ssZ
-
-    //   * USE ASYNC AND AWAIT* I guess. . . if you were doing I/O Bound or Network Bound stuff . . .
-
-    //   REDUCE TO ONLY THREE OR FOUR METHODS IF POSSIBLE ?!?!?!?
-
-    //   If users input data and that data is output back to the screen in a web response, that could be a way for hackers to attack called Cross-Site Scripting(XSS). The Anti-XSS library helps you to handle this. The Anti-XSS library may also help prevent against LDAP injection.
-    //   But, what if you aren't displaying output back to the screen in a response?  What if you just pass data to a web service?  What if you just have a console app that takes arguments? What if you just pass data to an NServiceBus endpoint? Or just read a value to or from a plain text file or XML or JSON?
-    //   In other words, I would like a library for developers to use to allow and encourage basic sanitization of any externally input data coming into any C# .NET app of any kind . . . 
-    //   The risks here are lower but it's still likely a good practice . . . to do things like check values against a valid whitelist where possible or clean against basic SQL Injection attacks or throw (and log) exceptions if a hacker tries to pass in bad arguments to an app (exploring) and so catch them.
-    //   This isn't meant to be perfect but to be a reasonably secure, modest sanitizer to encourage good and regular discipline by developers?
-    //   I am envisioning something like the following features?
-    //   0. TruncateToValidLength (e.g. max length of a string or max value of a number)
-    //   Why? To protect against buffer overflow attacks, e.g. if using unsafe keyword: https://stackoverflow.com/questions/9343665/are-buffer-overflow-exploits-possible-in-c
-    //   1. Validate datatype REMOVED - NOT AN ISSUE
-    //   2. NormalizeUnicode
-    //   OR
-    //   3. LimitToASCIIOnly
-    //   Why? To assist with safe whitelisting
-    //   4. RegexInputValidation (optional) - e.g. validate URL syntax, phone number, etc.
+    // NEXT FEATURES TO ADD . . .
+    //   2. RegexInputValidation (optional) - e.g. validate URL syntax, phone number, etc.
     //      bool match = Regex.IsMatch(input, Regex.Escape(regex)); // Compliant  - avoid regular expression denial of service https://rules.sonarsource.com/csharp/type/Vulnerability/RSPEC-2631
     //      return Content("Valid? " + match);
     //      Allow only alphanumeric characters  if (value == null || !Regex.IsMatch(value, "^[a-zA-Z0-9]+$"))
@@ -84,6 +70,8 @@ namespace ModestSanitizer
         /// </summary>
         public SaniApproach SanitizerApproach { get; set; }
         public MinMax MinMax {get;set;}
+        public Truncate Truncate { get; set; }
+        public NormalizeOrLimit NormalizeOrLimit { get; set; }
 
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
@@ -93,198 +81,21 @@ namespace ModestSanitizer
             {
                 SaniExceptions = new Dictionary<Guid, KeyValuePair<SaniTypes, string>>();
             }
-            
-            MinMax = new MinMax(SanitizerApproach, SaniExceptions);
+
+            Truncate = new Truncate(SanitizerApproach, SaniExceptions);
+            MinMax = new MinMax(Truncate, SanitizerApproach, SaniExceptions);
+            NormalizeOrLimit = new NormalizeOrLimit(Truncate, SanitizerApproach, SaniExceptions);
         }
 
-        //List<string> with list of sanitization errors mitigated
+        #region Random Notes for Possible Future Features
 
-        /// <summary>
-        /// TruncateToValidLength -  max length of a string
-        /// </summary>
-        /// <param name="strToClean"></param>
-        /// <returns></returns>   
-        public static string TruncateToValidLength(string strToClean, int strMaxLength)
-        {
-            string tmpResult = String.Empty;
+        //DATE FORMATTING:    ISO 8601 (yyyy-MM-dd'T'HH:mm:ssZ
 
-            try
-            {
-                if (string.IsNullOrWhiteSpace(strToClean))
-                {
-                    tmpResult = strToClean;
-                }
-                else
-                {
-                    if (strToClean.Length >= strMaxLength)
-                    {
-                        tmpResult = strToClean.Substring(0, strMaxLength);
-                    }
-                    else
-                    {
-                        tmpResult = strToClean;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new SanitizerException("Error truncating to valid length: " + (strToClean ?? String.Empty), ex);
-            }
-            return tmpResult;
-        }
+        //   * USE ASYNC AND AWAIT* I guess. . . if you were doing I/O Bound or Network Bound stuff . . .  
 
-        //SOURCE: https://github.com/microsoft/referencesource/blob/master/System.ComponentModel.DataAnnotations/DataAnnotations/Validator.cs
-        private static bool ValidateDataType(Type destinationType, object value)
-        {
-            if (destinationType == null)
-            {
-                throw new ArgumentNullException("destinationType");
-            }
-
-            if (value == null)
-            {
-                // Null can be assigned only to reference types or Nullable or Nullable<>
-                return !destinationType.IsValueType ||
-                        (destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(Nullable<>));
-            }
-
-            // Not null -- be sure it can be cast to the right type
-            return destinationType.IsAssignableFrom(value.GetType());
-        }
-
-        /// <summary>
-        /// 1. Normalize Unicode for if you are planning to compare against a Unicode Whitelist (so you know which Normalization Form to use.)
-        /// </summary>
-        /// <param name="strToClean"></param>
-        /// <returns></returns>   
-        public static string NormalizeUnicode(string strToClean)
-        {
-            string tmpResult = String.Empty;
-
-            try
-            {
-                //SOURCE: https://stackoverflow.com/questions/15683717/unicode-to-ascii-conversion-mapping
-
-                if (string.IsNullOrWhiteSpace(strToClean))
-                {
-                    tmpResult = strToClean;
-                }
-                else
-                {
-                    tmpResult = strToClean.Normalize(NormalizationForm.FormKC);
-
-                    //This will retain diacritic characters after normalization.
-                    tmpResult = new string(tmpResult.Where(c =>
-                    {
-                        UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(c);
-                        return category != UnicodeCategory.NonSpacingMark;
-                    }).ToArray());
-                }
-
-            }
-            catch (Exception ex)
-            {
-                throw new SanitizerException("Error normalizing unicode: " + (strToClean??String.Empty), ex);
-            }
-
-            return tmpResult;
-        }
-
-        /// <summary>
-        /// 2. This will limit a Unicode string to just the limited subset of ASCII-compatible characters.
-        /// </summary>
-        /// <param name="strToClean"></param>
-        /// <returns></returns>
-        public static string LimitToASCIIOnly(string strToClean)
-        {
-            string tmpResult = String.Empty;
-            bool removeAccents = true;
-
-            try
-            {
-
-                //TODO: How to handle exceptions such as Pi, Euro, cent, etc.?
-
-
-                if (string.IsNullOrWhiteSpace(strToClean))
-                {
-                    tmpResult = strToClean;
-                }
-                else
-                {
-                    tmpResult = strToClean.Normalize(NormalizationForm.FormKC);
-                    
-                    //SOURCES:
-                    //https://stackoverflow.com/questions/1008802/converting-symbols-accent-letters-to-english-alphabet
-                    //http://www.codecodex.com/wiki/Unaccent_letters
-                    //http://www.unicode.org/Public/security/latest/confusables.txt
-                    //https://stackoverflow.com/questions/4846365/find-characters-that-are-similar-glyphically-in-unicode
-                    
-                    if (removeAccents)
-                    {
-                        string PLAIN_ASCII =
-                            "AaEeIiOoUu"    // grave ` (U+0060)
-                          + "AaEeIiOoUuYy"  // acute ´ (U+00B4)
-                          + "AaEeIiOoUuYy"  // circumflex ^ (U+005E)
-                          + "AaOoNn"        // tilde ~ (U+007E) [Most frequent in Spanish such as "español".]
-                          + "AaEeIiOoUuYy"  // diaeresis or umlaut ̈	 (U+0308)
-                          + "AaUu"          // ring ̊  (U+030A) [Most frequent Danish or Swedish Å, but also potentially Ů in Czech.]
-                          + "Cc"            // cedilla ̧  (U+00B8) [Most frequent character with cedilla is "ç" such as in "façade".]
-                          + "OoUu";         // double acute ̋   (U+030B) [Most frequent in Hungarian for Ő and Ű.]
-
-                        //For example, handles: Ù, Ú, Û, ñ, Ü, Ů, ç, Ű
-                       
-                        //TODO: Add support for the following: Ū, Ŭ
-
-                        //Does NOT currently support the following diacritical chars: Ư, Ǔ, Ǖ, Ǘ, Ǚ, Ǜ, Ủ, Ứ, Ừ, Ử, Ữ, Ự";
-                        
-                        string UNICODE =
-                          "\u00C0\u00E0\u00C8\u00E8\u00CC\u00EC\u00D2\u00F2\u00D9\u00F9"
-                         + "\u00C1\u00E1\u00C9\u00E9\u00CD\u00ED\u00D3\u00F3\u00DA\u00FA\u00DD\u00FD"
-                         + "\u00C2\u00E2\u00CA\u00EA\u00CE\u00EE\u00D4\u00F4\u00DB\u00FB\u0176\u0177"
-                         + "\u00C3\u00E3\u00D5\u00F5\u00D1\u00F1"
-                         + "\u00C4\u00E4\u00CB\u00EB\u00CF\u00EF\u00D6\u00F6\u00DC\u00FC\u0178\u00FF"
-                         + "\u00C5\u00E5\u016E\u016F"
-                         + "\u00C7\u00E7"
-                         + "\u0150\u0151\u0170\u0171"
-                         ;
-
-                        // remove accentuated from a string and replace with ascii equivalent
-                        StringBuilder sb = new StringBuilder();
-
-                        int n = tmpResult.Length;
-                        for (int i = 0; i < n; i++)
-                        {
-                            char c = tmpResult.ToCharArray()[i];
-                            int pos = UNICODE.IndexOf(c);
-                            if (pos > -1)
-                            {
-                                sb.Append(PLAIN_ASCII.ToCharArray()[pos]);
-                            }
-                            else
-                            {
-                                sb.Append(c);
-                            }
-                        }
-                        tmpResult = sb.ToString();
-
-                        //THIS WILL LIMIT TO JUST ASCII CHARACTERS. THIS WILL REMOVE ANY DIACRITIC CHARACTERS!!
-                        tmpResult = new string(tmpResult.ToCharArray().Where(c => (int)c <= 127).ToArray());                       
-                    }
-                }
-
-            }
-            catch (Exception ex)
-            {
-                throw new SanitizerException("Error limiting unicode to ASCII: " + (strToClean ?? String.Empty), ex);
-            }
-            return tmpResult;
-        }
-
-               
         //https://www.codementor.io/@satyaarya/prevent-sql-injection-attacks-in-net-ocfxkhnyf
         //how to detect and/or prevent hexadecimal/binary/decimal? Octal?
-               
+
         //In the long run, it's probably better to normalize all strings before storing them into a database. 
         //If the same text can be represented with different codepoint sequences, it will also cause troubles in database queries. 
         //And most database are unable to normalize strings. &#x30A;  second way to represent å is used.
@@ -306,7 +117,7 @@ namespace ModestSanitizer
         //    public static char[] badChars = { ';', ',', '"', '%' };
         //    public static string[] badCommands = { "--", "xp_cmdshell", "Drop", "Update" };
         //}
-        
+
         ////Defines the set of characters that will be checked.
         ////You can add to this list, or remove items from this list, as appropriate for your site
         //public static string[] blackList = {"--",";--",";","/*","*/","@@","@",
@@ -359,5 +170,24 @@ namespace ModestSanitizer
         //    }
         //SOURCE: https://forums.asp.net/t/1254125.aspx
 
+        ////SOURCE: https://github.com/microsoft/referencesource/blob/master/System.ComponentModel.DataAnnotations/DataAnnotations/Validator.cs
+        //private static bool ValidateDataType(Type destinationType, object value)
+        //{
+        //    if (destinationType == null)
+        //    {
+        //        throw new ArgumentNullException("destinationType");
+        //    }
+
+        //    if (value == null)
+        //    {
+        //        // Null can be assigned only to reference types or Nullable or Nullable<>
+        //        return !destinationType.IsValueType ||
+        //                (destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(Nullable<>));
+        //    }
+
+        //    // Not null -- be sure it can be cast to the right type
+        //    return destinationType.IsAssignableFrom(value.GetType());
+        //}
+        #endregion
     }
 }
