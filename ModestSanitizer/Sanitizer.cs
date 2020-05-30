@@ -8,35 +8,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ModestSanitizer
 {
-    //   REASONABLY SECURE GENERAL PURPOSE LIBRARY TO SANITIZE INPUT THAT DOES NOT REQUIRE OUTPUT ENCODING.
-    //   For output encoding see Anti-XSS
-    //   For LDAP encoding see Anti-XSS
-    //
-    //   This library is to encourage basic sanitization of any externally input data coming into any C# .NET app of any kind . . . 
-    //   It's likely a good practice to do things like check values against a valid whitelist or log exceptions if a hacker tries to pass in bad arguments.
-    //   This isn't meant to be perfect but to be a reasonably secure, modest sanitizer to encourage good and regular discipline by developers.
-
-    // NEXT FEATURES TO ADD . . .
-    //   2. RegexInputValidation (optional) - e.g. validate URL syntax, phone number, etc.
-    //      bool match = Regex.IsMatch(input, Regex.Escape(regex)); // Compliant  - avoid regular expression denial of service https://rules.sonarsource.com/csharp/type/Vulnerability/RSPEC-2631
-    //      return Content("Valid? " + match);
-    //      Allow only alphanumeric characters  if (value == null || !Regex.IsMatch(value, "^[a-zA-Z0-9]+$"))
-    //   Why? To assist with safe whitelisting
-    //   OR
-    //   5. Check whitelist of valid values ASCII or Unicode (overload)  
-    //   Why? To assist with safe whitelisting
-    //   6. Interrogate if hexadecimal? %%, %p,%d,%c,%u,%x,%s,%n,\x
-    //   Why? To protect against format string attacks with unsafe keyword: https://owasp.org/www-community/attacks/Format_string_attack
-    //   7. Basic prevention of SQLInjection such as replacing ;,',--,* ... */,<,>,%,Or,xp_,sp_,exec_, or other SQL keywords?
-    //   Why? To prevent against SQL Injection attacks if NOT parameterizing queries or using an ORM, or if explicitly using dynamic SQL
-    //   8. Filename cleanse??? 
-    //   Why? Prevent tricks with chars that simulate a dot (a period), etc.
-    //   9. Throw exception on blacklist values (optional and un-advised, whitelist is better)
-    //   10. Prevent OS Command injections, prevent calls to MSBuild.exe and RegAsm.exe, WriteAllText, reflection.Emit, Process.Start(), foldername && ipconfig, or /sbin/shutdown by blacklisting these string values
-    //   11. Set CurrentCulture before performing String.Compare?  SOURCE: https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-1.1/5bz7d2f8(v=vs.71)?redirectedfrom=MSDN
-    //Also, french(?) system locale. So converting your variable to string inserts a comma for the decimal separator. Your SQL Server wants a dot as a decimal separator if you use a SQL Statement.so your 3469,2 gets a 34692.
-    //   12. Array of allowed values for small sets of string parameters (e.g. days of week).
-    //   13. Parameter fuzzing exceptions - to tie to system alerts
+    /// <summary>
+    /// REASONABLY SECURE GENERAL PURPOSE LIBRARY TO SANITIZE INPUT THAT DOES NOT REQUIRE OUTPUT ENCODING.
+    /// For output encoding see Anti-XSS.
+    //  For LDAP encoding see Anti-XSS.
+    /// </summary>
     public class Sanitizer
     {
         public enum SaniTypes{ 
@@ -72,6 +48,7 @@ namespace ModestSanitizer
         public MinMax MinMax {get;set;}
         public Truncate Truncate { get; set; }
         public NormalizeOrLimit NormalizeOrLimit { get; set; }
+        public FileNameCleanse FileNameCleanse { get; set; }
 
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
@@ -85,13 +62,102 @@ namespace ModestSanitizer
             Truncate = new Truncate(SanitizerApproach, SaniExceptions);
             MinMax = new MinMax(Truncate, SanitizerApproach, SaniExceptions);
             NormalizeOrLimit = new NormalizeOrLimit(Truncate, SanitizerApproach, SaniExceptions);
+            FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
         }
 
-        #region Random Notes for Possible Future Features
+        #region High-level List of Next Features to Add
+        //   2. RegexInputValidation (optional) - e.g. validate URL syntax, phone number, etc.
+        //See OWASP Regex examples here: https://owasp.org/www-community/OWASP_Validation_Regex_Repository
+        //      Allow only alphanumeric characters  if (value == null || !Regex.IsMatch(value, "^[a-zA-Z0-9]+$"))
+        //   Why? To assist with safe whitelisting
+        //   OR
+        //   5. Check whitelist of valid values ASCII or Unicode (overload)  
+        //   Why? To assist with safe whitelisting
+        //   6. Interrogate if hexadecimal? %%, %p,%d,%c,%u,%x,%s,%n,\x
+        //   Why? To protect against format string attacks with unsafe keyword: https://owasp.org/www-community/attacks/Format_string_attack
+        //   7. Basic prevention of SQLInjection such as replacing ;,',--,* ... */,<,>,%,Or,xp_,sp_,exec_, or other SQL keywords?
+        //   Why? To prevent against SQL Injection attacks if NOT parameterizing queries or using an ORM, or if explicitly using dynamic SQL
+        //   8. Filename cleanse??? Path cleanse?
+        //   Why? Prevent tricks with chars that simulate a dot (a period), etc.
+        //   9. Throw exception on blacklist values (optional and un-advised, whitelist is better)
+        //   10. Prevent OS Command injections, prevent calls to MSBuild.exe and RegAsm.exe, WriteAllText, reflection.Emit, Process.Start(), foldername && ipconfig, or /sbin/shutdown by blacklisting these string values
+        //   11. Set CurrentCulture before performing String.Compare?  SOURCE: https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-1.1/5bz7d2f8(v=vs.71)?redirectedfrom=MSDN
+        //Also, french(?) system locale. So converting your variable to string inserts a comma for the decimal separator. Your SQL Server wants a dot as a decimal separator if you use a SQL Statement.so your 3469,2 gets a 34692.
+        //   12. Array of allowed values for small sets of string parameters (e.g. days of week).
+        //   13. Parameter fuzzing exceptions - to tie to system alerts
+        #endregion
+
+        #region Detailed Notes for Possible Future Features
 
         //DATE FORMATTING:    ISO 8601 (yyyy-MM-dd'T'HH:mm:ssZ
 
         //   * USE ASYNC AND AWAIT* I guess. . . if you were doing I/O Bound or Network Bound stuff . . .  
+
+        //SOURCE: https://stackoverflow.com/questions/6730009/validate-a-file-name-on-windows
+        //        "  (?:\\.[^.]*)?                  # prevent dot dot?
+        //^(?!^(PRN|AUX|CLOCK\$|NUL|CON|COM\d|LPT\d|\..*)(\..+)?$)[^\x00-\x1f\\?*:\"";|\/]+$
+
+        //TODO: Support Filepath cleanse??? Leverage the below with added Regex parser?
+
+        ///// <summary>
+        ///// Cleans paths of invalid characters.
+        ///// </summary>
+        //public static class PathSanitizer
+        //{
+        //    /// <summary>
+        //    /// The set of invalid path characters, kept sorted for fast binary search
+        //    /// </summary>
+        //    private readonly static char[] invalidPathChars;
+
+        //    static PathSanitizer()
+        //    {
+        //        // set up the two arrays -- sorted once for speed.
+        //        invalidPathChars = System.IO.Path.GetInvalidPathChars();
+        //        Array.Sort(invalidPathChars);
+        //    }
+
+        //    /// <summary>
+        //    /// Cleans a path of invalid characters
+        //    /// </summary>
+        //    /// <param name="input">the string to clean</param>
+        //    /// <param name="errorChar">the character which replaces bad characters</param>
+        //    /// <returns></returns>
+        //    public static string SanitizePath(string input, char errorChar)
+        //    {
+        //        return Sanitize(input, invalidPathChars, errorChar);
+        //    }
+
+        //    /// <summary>
+        //    /// Cleans a string of invalid characters.
+        //    /// </summary>
+        //    /// <param name="input"></param>
+        //    /// <param name="invalidChars"></param>
+        //    /// <param name="errorChar"></param>
+        //    /// <returns></returns>
+        //    private static string Sanitize(string input, char[] invalidChars, char errorChar)
+        //    {
+        //        // null always sanitizes to null
+        //        if (input == null) { return null; }
+        //        StringBuilder result = new StringBuilder();
+        //        foreach (var characterToTest in input)
+        //        {
+        //            // we binary search for the character in the invalid set. This should be lightning fast.
+        //            if (Array.BinarySearch(invalidChars, characterToTest) >= 0)
+        //            {
+        //                // we found the character in the array of 
+        //                result.Append(errorChar);
+        //            }
+        //            else
+        //            {
+        //                // the character was not found in invalid, so it is valid.
+        //                result.Append(characterToTest);
+        //            }
+        //        }
+
+        //        // we're done.
+        //        return result.ToString();
+        //    }
+        //}   
 
         //https://www.codementor.io/@satyaarya/prevent-sql-injection-attacks-in-net-ocfxkhnyf
         //how to detect and/or prevent hexadecimal/binary/decimal? Octal?

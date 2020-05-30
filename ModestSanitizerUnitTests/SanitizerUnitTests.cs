@@ -162,5 +162,108 @@ namespace ModestSanitizerUnitTests
             //Removes the accent marks
             Assert.AreEqual("E,E,E,E,U,U,I,I,A,A,O,e,e,e,e,u,u,i,i,a,a,o", stringLimitedToLetterlikeChars4); //compare
         }
-    }
-}
+
+        [TestMethod]
+        public void Test_SanitizeViaRegexUsingASCII()
+        {
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+            bool wasExceptionThrown = false;
+            string innerExceptionMsg = String.Empty;
+
+            try
+            {
+                //Test #1 - test malicious null byte \u00A0 character
+                string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secret.doc \u00A0.pdf", 20, true);
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+            Assert.AreEqual("Filename contains potentially malicious characters.", innerExceptionMsg);
+
+            wasExceptionThrown = false; //re-set flag
+
+            try
+            {
+                //Test #2 - throw exception due to trailing dot
+                string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("my presentation.pptx.", 21, false);
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+            Assert.AreEqual("Filename is NOT a valid Windows filename.", innerExceptionMsg);
+
+            wasExceptionThrown = false; //re-set flag
+
+            try
+            {
+                //Test #3 - throw exception for more than one dot
+                sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secret.doc .pdf", 20, true);
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+            Assert.AreEqual("Filename contains more than one dot character.", innerExceptionMsg);
+
+            wasExceptionThrown = false; //re-set flag
+
+            //Test #4 - green case - valid filename
+            string result4 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("my.report.05-29-2020.pdf", 25, false);
+            Assert.AreEqual("my.report.05-29-2020.pdf", result4);
+
+            //Test #5 - green case - valid filename - chopping off date
+            string result5 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("  myfile.txt05-29-2020", 12, false);
+            Assert.AreEqual("  myfile.txt", result5);
+
+            //TODO: Add extra tests for the following cases
+
+            //            Assert.IsFalse(rxa.IsValid("."));
+            //            Assert.IsFalse(rxa.IsValid(".pp.tx"));
+            //            Assert.IsFalse(rxa.IsValid(".pptx"));
+            //            Assert.IsFalse(rxa.IsValid("pptx"));
+            //            Assert.IsFalse(rxa.IsValid("a/abc.pptx"));
+            //            Assert.IsFalse(rxa.IsValid("a\\abc.pptx"));
+            //            Assert.IsFalse(rxa.IsValid("c:abc.pptx"));
+            //            Assert.IsFalse(rxa.IsValid("c<abc.pptx"));
+            //            Assert.IsTrue(rxa.IsValid("abc.pptx"));
+            //            rxa = new ValidFileNameAttribute { AllowedExtensions = ".pptx" };
+            //            Assert.IsFalse(rxa.IsValid("abc.docx"));
+            //            Assert.IsTrue(rxa.IsValid("abc.pptx"));
+            //            CON, PRN, AUX, NUL, COM#
+            //                var nameToTest = "Best file name \"ever\".txt";
+            //            var pathToTest = "C:\\My Folder <secrets>\\";
+
+            Sanitizer sanitizer2 = new Sanitizer(SaniApproach.TrackExceptionsInList);
+
+            try
+            {
+                //Test #? - should track exception for no file extension
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("999999999999999999999999999999999", 50, false);
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+            }
+
+            Assert.AreEqual(false, wasExceptionThrown);
+
+            wasExceptionThrown = false; //re-set flag
+
+            KeyValuePair<SaniTypes, string> kvp = sanitizer2.SaniExceptions.Values.FirstOrDefault<KeyValuePair<SaniTypes, string>>();
+            Assert.AreEqual(kvp.Key, SaniTypes.FileNameCleanse);
+            Assert.AreEqual(kvp.Value, "Filename: 999999999999999 Exception: Filename does NOT contain at least one dot character.");
+        }
+
+    }//end of class
+}//end of namespace

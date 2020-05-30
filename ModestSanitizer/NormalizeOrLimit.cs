@@ -86,6 +86,7 @@ namespace ModestSanitizer
             try
             {
                 //TODO: How to handle exceptions such as Pi, Euro, cent, etc.?
+                //The Unicode code point for "€" is U+20AC
 
                 if (string.IsNullOrWhiteSpace(strToClean))
                 {
@@ -150,7 +151,7 @@ namespace ModestSanitizer
                         tmpResult = sb.ToString();
 
                         //THIS WILL LIMIT TO JUST ASCII CHARACTERS. THIS WILL REMOVE ANY DIACRITIC CHARACTERS!!
-                        tmpResult = new string(tmpResult.ToCharArray().Where(c => (int)c <= 127).ToArray());
+                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => (int)c <= 127).ToArray()));
                     }
                 }
 
