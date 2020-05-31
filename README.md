@@ -1,12 +1,12 @@
 # ModestSanitizer
-REASONABLY SECURE GENERAL PURPOSE LIBRARY TO SANITIZE INPUT THAT DOES NOT REQUIRE OUTPUT ENCODING.
-For output encoding see Anti-XSS
-For LDAP encoding see Anti-XSS
+REASONABLY SECURE GENERAL PURPOSE C# LIBRARY TO SANITIZE INPUT THAT DOES NOT REQUIRE OUTPUT ENCODING.
+For output encoding see Anti-XSS.
+For LDAP encoding see Anti-XSS.
 
 ADVICE: Validate all input
 RE-STATED: Developers often don't validate all input. 
 They take the shotgun parser approach where they assume input is well-formed, whereas a recognizer would verify input as well-formed.
-LANGSEC: Language-theoretic Security: treat all valid or expected inputs as a formal language and the input-handling routines as a recognizer for that language
+LANGSEC-Language-theoretic Security: treat all valid or expected inputs as a formal language and the input-handling routines as a recognizer for that language.
 
 But I see this as two steps: 1. Sanitization (using a Recognizer) and 2. Input Validation.
 

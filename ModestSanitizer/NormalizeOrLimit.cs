@@ -86,7 +86,7 @@ namespace ModestSanitizer
             try
             {
                 //TODO: How to handle exceptions such as Pi, Euro, cent, etc.?
-                //The Unicode code point for "€" is U+20AC
+                //The Unicode code point for "€" is U+20AC  British Pound U+FFE1
 
                 if (string.IsNullOrWhiteSpace(strToClean))
                 {

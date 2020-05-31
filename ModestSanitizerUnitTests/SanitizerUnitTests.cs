@@ -173,7 +173,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #1 - test malicious null byte \u00A0 character
-                string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secret.doc \u00A0.pdf", 20, true);
+                string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secretdoc \u00A0.pdf", 20, true, ".pdf",false,false,false,false,false);
             }
             catch (SanitizerException se)
             {
@@ -189,7 +189,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #2 - throw exception due to trailing dot
-                string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("my presentation.pptx.", 21, false);
+                string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("my presentationpptx.", 21, false, null, true, false, false, false, false);
             }
             catch (SanitizerException se)
             {
@@ -205,7 +205,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #3 - throw exception for more than one dot
-                sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secret.doc .pdf", 20, true);
+                sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secret.doc .pdf", 20, true, ".pdf", false, false, false, false, false);
             }
             catch (SanitizerException se)
             {
@@ -219,11 +219,11 @@ namespace ModestSanitizerUnitTests
             wasExceptionThrown = false; //re-set flag
 
             //Test #4 - green case - valid filename
-            string result4 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("my.report.05-29-2020.pdf", 25, false);
+            string result4 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("my.report.05-29-2020.pdf", 25, false, ".pdf", false, false, false, false, false);
             Assert.AreEqual("my.report.05-29-2020.pdf", result4);
 
             //Test #5 - green case - valid filename - chopping off date
-            string result5 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("  myfile.txt05-29-2020", 12, false);
+            string result5 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("  myfile.txt05-29-2020", 12, false, ".txt", false, false, false, false, false);
             Assert.AreEqual("  myfile.txt", result5);
 
             //TODO: Add extra tests for the following cases
@@ -249,7 +249,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #? - should track exception for no file extension
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("999999999999999999999999999999999", 50, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("999999999999999999999999999999999", 50, false, null, true, true, true, true, true);
             }
             catch (SanitizerException se)
             {
