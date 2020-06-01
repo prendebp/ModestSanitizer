@@ -49,20 +49,20 @@ namespace ModestSanitizer
         public Truncate Truncate { get; set; }
         public NormalizeOrLimit NormalizeOrLimit { get; set; }
         public FileNameCleanse FileNameCleanse { get; set; }
-
+        public bool CompileRegex { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
-        public Sanitizer(SaniApproach sanitizerApproach) {
+        public Sanitizer(SaniApproach sanitizerApproach, bool compileRegex) {
             SanitizerApproach = sanitizerApproach;
             if (sanitizerApproach == SaniApproach.TrackExceptionsInList)
             {
                 SaniExceptions = new Dictionary<Guid, KeyValuePair<SaniTypes, string>>();
             }
-
+            CompileRegex = compileRegex;
             Truncate = new Truncate(SanitizerApproach, SaniExceptions);
             MinMax = new MinMax(Truncate, SanitizerApproach, SaniExceptions);
             NormalizeOrLimit = new NormalizeOrLimit(Truncate, SanitizerApproach, SaniExceptions);
-            FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
+            FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, compileRegex, SaniExceptions);
         }
 
         #region High-level List of Next Features to Add
@@ -80,7 +80,7 @@ namespace ModestSanitizer
         //   8. Filename cleanse??? Path cleanse?
         //   Why? Prevent tricks with chars that simulate a dot (a period), etc.
         //   9. Throw exception on blacklist values (optional and un-advised, whitelist is better)
-        //   10. Prevent OS Command injections, prevent calls to MSBuild.exe and RegAsm.exe, WriteAllText, reflection.Emit, Process.Start(), foldername && ipconfig, or /sbin/shutdown by blacklisting these string values
+        //   10. Prevent OS Command injections, prevent calls to MSBuild.exe installutil.exe.and RegAsm.exe, WriteAllText, reflection.Emit, Process.Start(), foldername && ipconfig, or /sbin/shutdown by blacklisting these string values
         //   11. Set CurrentCulture before performing String.Compare?  SOURCE: https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-1.1/5bz7d2f8(v=vs.71)?redirectedfrom=MSDN
         //Also, french(?) system locale. So converting your variable to string inserts a comma for the decimal separator. Your SQL Server wants a dot as a decimal separator if you use a SQL Statement.so your 3469,2 gets a 34692.
         //   12. Array of allowed values for small sets of string parameters (e.g. days of week).

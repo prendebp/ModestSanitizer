@@ -13,7 +13,7 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_ReduceToValidMaxMinValue()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
             int? result = sanitizer.MinMax.ReduceToValidValue("5", 4, 0);
 
             Assert.AreEqual(4, result);
@@ -52,7 +52,7 @@ namespace ModestSanitizerUnitTests
 
             wasExceptionThrown = false; //re-set flag
 
-            Sanitizer sanitizer2 = new Sanitizer(SaniApproach.TrackExceptionsInList);
+            Sanitizer sanitizer2 = new Sanitizer(SaniApproach.TrackExceptionsInList, true);
 
             try
             {
@@ -75,7 +75,7 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_TruncateToValidLength()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
             String result = sanitizer.Truncate.TruncateToValidLength("testBigger", 4);
 
             Assert.AreEqual("test", result);
@@ -100,7 +100,7 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_NormalizeUnicode()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
             String result = sanitizer.NormalizeOrLimit.NormalizeUnicode("äiti");
 
             //Normalize to the nfkc format of Unicode
@@ -123,7 +123,7 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_LimitToASCIIOnly()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
 
             //Another approach to have a reliable whitelist (for comparison purposes)
             String potentiallyMaliciousString = "äiti®";
@@ -150,29 +150,27 @@ namespace ModestSanitizerUnitTests
             //just the subset of unicode chars that "matches" ASCII characters.
             String stringLimitedToLetterlikeChars3 = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString3);
 
-            //Removes the accent from the 'a', but removes the copyright symbol altogether
+            //Removes the accent marks from the unicode characters U, n, c O
             Assert.AreEqual("U, U, U, U, n, U, U, c, O", stringLimitedToLetterlikeChars3); //compare
 
             String potentiallyMaliciousString4 = "È,É,Ê,Ë,Û,Ù,Ï,Î,À,Â,Ô,è,é,ê,ë,û,ù,ï,î,à,â,ô";
 
-            //The idea here is to limit the string of UTF-8 characters to 
-            //just the subset of unicode chars that "matches" ASCII characters.
             String stringLimitedToLetterlikeChars4 = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString4);
 
-            //Removes the accent marks
+            //Removes the accent marks from the unicode characters E, U, I, A, O including lower case versions
             Assert.AreEqual("E,E,E,E,U,U,I,I,A,A,O,e,e,e,e,u,u,i,i,a,a,o", stringLimitedToLetterlikeChars4); //compare
         }
 
         [TestMethod]
         public void Test_SanitizeViaRegexUsingASCII()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions);
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
             bool wasExceptionThrown = false;
             string innerExceptionMsg = String.Empty;
 
             try
             {
-                //Test #1 - test malicious null byte \u00A0 character
+                //Test #1 - test potentially malicious non-breaking space \u00A0 character
                 string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secretdoc \u00A0.pdf", 20, true, ".pdf",false,false,false,false,false);
             }
             catch (SanitizerException se)
@@ -226,29 +224,11 @@ namespace ModestSanitizerUnitTests
             string result5 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("  myfile.txt05-29-2020", 12, false, ".txt", false, false, false, false, false);
             Assert.AreEqual("  myfile.txt", result5);
 
-            //TODO: Add extra tests for the following cases
-
-            //            Assert.IsFalse(rxa.IsValid("."));
-            //            Assert.IsFalse(rxa.IsValid(".pp.tx"));
-            //            Assert.IsFalse(rxa.IsValid(".pptx"));
-            //            Assert.IsFalse(rxa.IsValid("pptx"));
-            //            Assert.IsFalse(rxa.IsValid("a/abc.pptx"));
-            //            Assert.IsFalse(rxa.IsValid("a\\abc.pptx"));
-            //            Assert.IsFalse(rxa.IsValid("c:abc.pptx"));
-            //            Assert.IsFalse(rxa.IsValid("c<abc.pptx"));
-            //            Assert.IsTrue(rxa.IsValid("abc.pptx"));
-            //            rxa = new ValidFileNameAttribute { AllowedExtensions = ".pptx" };
-            //            Assert.IsFalse(rxa.IsValid("abc.docx"));
-            //            Assert.IsTrue(rxa.IsValid("abc.pptx"));
-            //            CON, PRN, AUX, NUL, COM#
-            //                var nameToTest = "Best file name \"ever\".txt";
-            //            var pathToTest = "C:\\My Folder <secrets>\\";
-
-            Sanitizer sanitizer2 = new Sanitizer(SaniApproach.TrackExceptionsInList);
+            Sanitizer sanitizer2 = new Sanitizer(SaniApproach.TrackExceptionsInList, true);
 
             try
             {
-                //Test #? - should track exception for no file extension
+                //Test #6 - should track exception for no file extension
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("999999999999999999999999999999999", 50, false, null, true, true, true, true, true);
             }
             catch (SanitizerException se)
@@ -263,6 +243,37 @@ namespace ModestSanitizerUnitTests
             KeyValuePair<SaniTypes, string> kvp = sanitizer2.SaniExceptions.Values.FirstOrDefault<KeyValuePair<SaniTypes, string>>();
             Assert.AreEqual(kvp.Key, SaniTypes.FileNameCleanse);
             Assert.AreEqual(kvp.Value, "Filename: 999999999999999 Exception: Filename does NOT contain at least one dot character.");
+
+            sanitizer2.SaniExceptions.Clear();
+
+            try
+            {
+                //Test #7 - should track exception for bad file extensions
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".", 50, false, null, true, true, true, true, true);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".pp.tx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("?.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("a/abc.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("a\\abc.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("c:abc.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("c<abc.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("CON.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("test \"escape\".txt", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("C:\\My Folder <test>.\\", 50, false, null, false, false, false, false, false);
+
+                //test blacklist for Office files - set disallow to true
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("abc.docx", 50, false, null, false, false, true, false, false);
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+            }
+
+            Assert.AreEqual(false, wasExceptionThrown);
+
+            wasExceptionThrown = false; //re-set flag
+
+            Assert.AreEqual(12, sanitizer2.SaniExceptions.Count);
         }
 
     }//end of class
