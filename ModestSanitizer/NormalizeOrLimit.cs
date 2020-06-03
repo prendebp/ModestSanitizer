@@ -85,8 +85,6 @@ namespace ModestSanitizer
 
             try
             {
-                //TODO: How to handle exceptions such as Pi, Euro, cent, etc.?
-                //The Unicode code point for "€" is U+20AC  British Pound U+FFE1
 
                 if (string.IsNullOrWhiteSpace(strToClean))
                 {
@@ -159,6 +157,43 @@ namespace ModestSanitizer
             catch (Exception ex)
             {
                 TrackOrThrowException("Error limiting unicode to ASCII: ", strToClean, ex);
+            }
+            return tmpResult;
+        }
+
+        /// <summary>
+        /// Limit a Unicode string to just the limited subset of ASCII-compatible numbers, aka Latin numbers.
+        /// </summary>
+        /// <param name="strToClean"></param>
+        /// <returns></returns>
+        public string LimitToASCIINumbersOnly(string strToClean, bool allowSpaces, bool allowParens, bool allowNegativeSign, bool allowCommaAndDot)
+        {
+            string tmpResult = String.Empty;
+
+            try
+            {
+
+                if (string.IsNullOrWhiteSpace(strToClean))
+                {
+                    tmpResult = strToClean;
+                }
+                else
+                {
+                    tmpResult = strToClean.Normalize(NormalizationForm.FormKC);//just to be extra safe
+                 
+                    tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48<= (int)c && (int)c <= 57) 
+                    || (allowSpaces?((int)c==32):false) //32 = space
+                    || (allowParens ? (((int)c == 40)|| ((int)c == 41)) : false)//40 and 41 = parens
+                    || (allowCommaAndDot ? ((int)c == 44) : false) //44 = ,
+                    || (allowNegativeSign ? ((int)c == 45) : false) //45 = dash 
+                    || (allowCommaAndDot ? ((int)c == 46) : false) //46 = dot 
+               
+                    )).ToArray()));                    
+                }
+            }
+            catch (Exception ex)
+            {
+                TrackOrThrowException("Error limiting unicode to ASCII Numbers Only: ", strToClean, ex);
             }
             return tmpResult;
         }

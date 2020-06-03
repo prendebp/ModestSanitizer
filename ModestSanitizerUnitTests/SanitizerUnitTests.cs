@@ -14,7 +14,37 @@ namespace ModestSanitizerUnitTests
         public void Test_ReduceToValidMaxMinValue()
         {
             Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
-            int? result = sanitizer.MinMax.ReduceToValidValue("5", 4, 0);
+
+            decimal? resultDollarSign = sanitizer.MinMax.ReduceToValidValue("-$100,000.00", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xCommaxDotx);
+
+            Assert.AreEqual(-100000.00M, resultDollarSign);
+
+            decimal? resultNegativeSign = sanitizer.MinMax.ReduceToValidValue("-1 220.5365$", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xSpacexDotx);
+
+            Assert.AreEqual(-1220.5365M, resultNegativeSign);
+
+            decimal? resultDotComma = sanitizer.MinMax.ReduceToValidValue("€120.000,99", 999999999999.99M, 0.00M, false, MinMax.CurrencySeparators.xDotxCommax);
+
+            Assert.AreEqual(120000.99M, resultDotComma);
+
+            decimal? resultSpaceComma = sanitizer.MinMax.ReduceToValidValue("€120 000,995", 999999999999.99M, 0.00M, false, MinMax.CurrencySeparators.xSpacexCommax);
+
+            Assert.AreEqual(120000.995M, resultSpaceComma);
+
+            decimal? resultSpace = sanitizer.MinMax.ReduceToValidValue("-20 000 $", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xSpacexDotx);
+
+            Assert.AreEqual(-20000M, resultSpace);
+
+            decimal? resultSpace2 = sanitizer.MinMax.ReduceToValidValue("($20,000)", 999999999999.99M, -19000.00M, true);
+
+            Assert.AreEqual(-19000M, resultSpace2);
+
+            decimal? resultInvalidLeadZeroes = sanitizer.MinMax.ReduceToValidValue("$00,012.7", 999999999999.99M, 0.00M, true);
+
+            Assert.AreEqual(12.7M, resultInvalidLeadZeroes);
+  
+
+            int ? result = sanitizer.MinMax.ReduceToValidValue("5", 4, 0);
 
             Assert.AreEqual(4, result);
 
@@ -70,6 +100,47 @@ namespace ModestSanitizerUnitTests
             KeyValuePair<SaniTypes, string> kvp =  sanitizer2.SaniExceptions.Values.FirstOrDefault<KeyValuePair<SaniTypes, string>>();
             Assert.AreEqual(kvp.Key, SaniTypes.MinMax);
             Assert.AreEqual(kvp.Value, "99999");
+
+
+            bool? result6 = sanitizer.MinMax.ReduceToValidValue("false");
+
+            Assert.AreEqual(false, result6);
+
+            bool? result7 = sanitizer.MinMax.ReduceToValidValue(" ");
+
+            Assert.AreEqual(null, result7);
+
+            bool? result8 = sanitizer.MinMax.ReduceToValidValue("True");
+
+            Assert.AreEqual(true, result8);
+
+            wasExceptionThrown = false; //re-set flag
+
+            try
+            {
+                bool? result9 = sanitizer.MinMax.ReduceToValidValue("1");
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+
+            wasExceptionThrown = false; //re-set flag
+
+            try
+            {
+                bool? result10 = sanitizer.MinMax.ReduceToValidValue("a bad value");
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+
+            wasExceptionThrown = false; //re-set flag           
         }
 
         [TestMethod]

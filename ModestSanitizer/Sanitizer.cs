@@ -60,8 +60,8 @@ namespace ModestSanitizer
             }
             CompileRegex = compileRegex;
             Truncate = new Truncate(SanitizerApproach, SaniExceptions);
-            MinMax = new MinMax(Truncate, SanitizerApproach, SaniExceptions);
             NormalizeOrLimit = new NormalizeOrLimit(Truncate, SanitizerApproach, SaniExceptions);
+            MinMax = new MinMax(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
             FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, compileRegex, SaniExceptions);
         }
 
