@@ -66,7 +66,7 @@ namespace ModestSanitizer
             commonBlacklist.Add(@"\u200B"); //replace zero-width space character with empty string
             commonBlacklist.Add(@"\u2009"); //replace thin space with empty string
             commonBlacklist.Add(@"\u007F"); //replace delete with empty string
-            commonBlacklist.Add(@"\u007E"); //replace tilde with empty string
+            //commonBlacklist.Add(@"\u007E"); //replace tilde with empty string
             commonBlacklist.Add(@"\u0000"); //replace null byte with empty string
             commonBlacklist.Add(@"\u202E"); //replace Left-To-Right with empty string
             commonBlacklist.Add(@"\u200F"); //replace Right-To-Left with empty string

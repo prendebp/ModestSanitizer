@@ -148,8 +148,8 @@ namespace ModestSanitizer
                         }
                         tmpResult = sb.ToString();
 
-                        //THIS WILL LIMIT TO JUST ASCII CHARACTERS. THIS WILL REMOVE ANY DIACRITIC CHARACTERS!!
-                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => (int)c <= 127).ToArray()));
+                        //THIS WILL LIMIT TO A SUBSET OF ASCII CHARACTERS. THIS WILL REMOVE ANY DIACRITIC, TABS, NEW LINE CHARACTERS!!
+                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => (32 <= (int)c && (int)c <= 126)).ToArray()));
                     }
                 }
 
