@@ -58,6 +58,6 @@ The ModestSanitizer is defined to sanitize input parameters in multiple steps.
 
 Alternatively, the strings may instead be limited to just a subset of ASCII characters 32-126, the letterlike or numberlike characters, mathematical operators, and punctuation marks. This again provides even greater reliability when comparing against a whitelist at the expense of being less viable in international scenarios where Unicode may be required.
 
-*The fifth and most important step (when possible) is to define a set of whitelist values and compare these against the now normalized/limited strings of input. This step should likely be set to ThrowExceptions and stop the program or escalate to support/security any true mismatches. FileNameCleanse may also be performed at this step. If whitelist values are NOT possible then at a minimum, at least the format of the input strings should be validated using Regex expressions. 
+* The fifth and most important step (when possible) is to define a set of whitelist values and compare these against the now normalized/limited strings of input. This step should likely be set to ThrowExceptions and stop the program or escalate to support/security any true mismatches. FileNameCleanse may also be performed at this step. If whitelist values are NOT possible then at a minimum, at least the format of the input strings should be validated using Regex expressions. 
 
 
