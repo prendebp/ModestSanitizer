@@ -66,7 +66,7 @@ namespace ModestSanitizer
             MinMax = new MinMax(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
             FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, compileRegex, SaniExceptions);
             Whitelist = new Whitelist(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
-            Blacklist = new Blacklist(Truncate, SanitizerApproach, SaniExceptions);
+            Blacklist = new Blacklist(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
         }
 
         #region High-level List of Next Features to Add

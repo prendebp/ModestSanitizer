@@ -183,6 +183,76 @@ namespace ModestSanitizerUnitTests
         }
 
         [TestMethod]
+        public void Test_BlacklistReview()
+        {
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
+            bool wasExceptionThrown = false;
+            string innerExceptionMsg = String.Empty;
+                   
+            try
+            {
+                //Hex value for 'javascript:alert(1337)'
+                string hexValue = (@"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29");
+
+                List<string> plainTextBlacklist = new List<string>();
+                plainTextBlacklist.Add(@"javascript: alert(1337)");
+                plainTextBlacklist.Add(@"javascript");
+                plainTextBlacklist.Add(@"alert");
+
+                bool checkForStandardHexBlacklistChars = false;
+
+                bool? result1 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(hexValue, plainTextBlacklist, 225, checkForStandardHexBlacklistChars, false);
+
+                Assert.AreEqual(false, result1); //no match since NOT checking for standard hex characters in the blacklist
+
+                checkForStandardHexBlacklistChars = true;
+
+                bool? result2 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(hexValue, plainTextBlacklist, 225, checkForStandardHexBlacklistChars, true);
+
+                Assert.AreEqual(true, result2); //match true on hex char \x since bool to check for standard hex blacklist chars was set to true.
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+            Assert.AreEqual("StringToCheck contains a blacklist value.", innerExceptionMsg);
+                      
+            wasExceptionThrown = false; //re-set flag
+            innerExceptionMsg = String.Empty; //re-set msg
+
+            try
+            {
+                string stringWithNullByte = @"myURL%00.biz";
+
+                List<string> plainTextBlacklist = new List<string>();
+                plainTextBlacklist.Add(@"myURL.biz");
+
+                bool checkForCommonMaliciousChars = false;
+
+                bool? result3 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(stringWithNullByte, plainTextBlacklist, 225, false, checkForCommonMaliciousChars);
+
+                Assert.AreEqual(false, result3); //no match since NOT checking for common malicious characters in the blacklist
+
+                checkForCommonMaliciousChars = true;
+
+                bool? result4 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(stringWithNullByte, plainTextBlacklist, 225, true, checkForCommonMaliciousChars);
+
+                Assert.AreEqual(true, result4); //match true on null byte %00 since bool to check for common malicious characters blacklist was set to true.
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+            Assert.AreEqual("StringToCheck contains a common malicious character.", innerExceptionMsg);
+        }
+
+        [TestMethod]
         public void Test_TruncateToValidLength()
         {
             Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
