@@ -49,6 +49,8 @@ namespace ModestSanitizer
         public Truncate Truncate { get; set; }
         public NormalizeOrLimit NormalizeOrLimit { get; set; }
         public FileNameCleanse FileNameCleanse { get; set; }
+        public Whitelist Whitelist { get; set; }
+        public Blacklist Blacklist { get; set; }
         public bool CompileRegex { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
@@ -63,6 +65,8 @@ namespace ModestSanitizer
             NormalizeOrLimit = new NormalizeOrLimit(Truncate, SanitizerApproach, SaniExceptions);
             MinMax = new MinMax(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
             FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, compileRegex, SaniExceptions);
+            Whitelist = new Whitelist(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
+            Blacklist = new Blacklist(Truncate, SanitizerApproach, SaniExceptions);
         }
 
         #region High-level List of Next Features to Add

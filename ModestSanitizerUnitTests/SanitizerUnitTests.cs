@@ -144,6 +144,45 @@ namespace ModestSanitizerUnitTests
         }
 
         [TestMethod]
+        public void Test_WhitelistEquals()
+        {
+            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
+            bool wasExceptionThrown = false;
+            string innerExceptionMsg = String.Empty;
+
+            bool? result = sanitizer.Whitelist.EqualsUsingASCII("farside", "farside", 7);
+
+            Assert.AreEqual(true, result);
+
+            bool? result2 = sanitizer.Whitelist.EqualsIgnoreCaseUsingASCII("farside", "farSiDe", 7);
+
+            Assert.AreEqual(true, result2);
+
+            try 
+            { 
+                bool? result3 = sanitizer.Whitelist.EqualsUsingASCII("farside", "farSiDe", 7);
+
+                Assert.AreEqual(false, result3);
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+            Assert.AreEqual("StringToCheck does NOT match whitelist value.", innerExceptionMsg);
+
+            bool? result4 = sanitizer.Whitelist.EqualsUsingASCII("farside", "far", 3);
+
+            Assert.AreEqual(true, result4);
+
+            bool? result5 = sanitizer.Whitelist.EqualsIgnoreCaseUsingASCII("faRside", "faR", 3);
+
+            Assert.AreEqual(true, result5);
+        }
+
+        [TestMethod]
         public void Test_TruncateToValidLength()
         {
             Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);

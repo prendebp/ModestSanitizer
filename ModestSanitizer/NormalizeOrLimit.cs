@@ -198,6 +198,42 @@ namespace ModestSanitizer
             return tmpResult;
         }
 
+        /// <summary>
+        /// Limit a Unicode string to just the limited subset of ASCII-compatible date times only, aka Latin numbers with date and time delimiters.
+        /// </summary>
+        /// <param name="strToClean"></param>
+        /// <returns></returns>
+        public string LimitToASCIIDateTimesOnly(string strToClean, bool allowSpaces, bool allowParens, bool allowNegativeSign, bool allowCommaAndDot)
+        {
+            string tmpResult = String.Empty;
+
+            try
+            {
+
+                if (string.IsNullOrWhiteSpace(strToClean))
+                {
+                    tmpResult = strToClean;
+                }
+                else
+                {
+                    tmpResult = strToClean.Normalize(NormalizationForm.FormKC);//just to be extra safe
+
+                    tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
+                    || (allowSpaces ? ((int)c == 32) : false) //32 = space
+                    || (allowParens ? (((int)c == 40) || ((int)c == 41)) : false)//40 and 41 = parens
+                    || (allowCommaAndDot ? ((int)c == 44) : false) //44 = ,
+                    || (allowNegativeSign ? ((int)c == 45) : false) //45 = dash 
+                    || (allowCommaAndDot ? ((int)c == 46) : false) //46 = dot 
+
+                    )).ToArray()));
+                }
+            }
+            catch (Exception ex)
+            {
+                TrackOrThrowException("Error limiting unicode to ASCII Numbers Only: ", strToClean, ex);
+            }
+            return tmpResult;
+        }
         private void TrackOrThrowException(string msg, string valToClean, Exception ex)
         {
             string exceptionValue = Truncate.TruncateToValidLength(valToClean, 5);
