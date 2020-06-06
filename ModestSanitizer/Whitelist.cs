@@ -60,7 +60,7 @@ namespace ModestSanitizer
                 {
                     string limitedToASCII = NormalizeOrLimit.LimitToASCIIOnly(stringToCheck);
                     string truncatedValue = Truncate.TruncateToValidLength(limitedToASCII, lengthToTruncateTo);
-                    bool isSuccess = (truncatedValue.CompareTo(whitelistValue)==0);
+                    bool isSuccess = (truncatedValue.Equals(whitelistValue));
 
                     if (isSuccess)
                     {
@@ -128,7 +128,9 @@ namespace ModestSanitizer
             }
             return tmpResult;
         }
-              
+
+        //TODO: partial whitelist such as the domain of an email address? ^[a-zA-Z0-9_+&*-]+(?:\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,7}$
+
         //SOURCE: https://stackoverflow.com/questions/6275980/string-replace-ignoring-case
         private static string Replace(string str, string old, string @new, StringComparison comparison)
         {

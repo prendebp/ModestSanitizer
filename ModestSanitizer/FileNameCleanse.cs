@@ -184,6 +184,7 @@ namespace ModestSanitizer
             tmpResult = Replace(tmpResult, "\u200F", string.Empty, ic); //replace Right-To-Left with empty string
             tmpResult = Replace(tmpResult, "% 00", string.Empty, ic); //alert on common examples of null bytes used on hacking sites
             tmpResult = Replace(tmpResult, "%00", string.Empty, ic); //alert on common examples of null bytes used on hacking sites
+            tmpResult = Replace(tmpResult, "\uFFFD", string.Empty, ic); //replace U+FFFD REPLACEMENT CHARACTER ('�') with empty string
             int finalLength = tmpResult.Length;
 
             return (finalLength< initialLength);

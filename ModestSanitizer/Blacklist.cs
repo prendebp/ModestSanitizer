@@ -37,6 +37,8 @@ namespace ModestSanitizer
             SaniExceptions = saniExceptions;
         }
 
+        //Why check for Hexadecimal? 
+        //To protect against format string attacks with unsafe keyword: https://owasp.org/www-community/attacks/Format_string_attack
         public static List<string> GenerateHexadecimalBlacklist()
         {
             List<string> hexBlacklist = new List<string>();
@@ -75,8 +77,9 @@ namespace ModestSanitizer
             commonBlacklist.Add(@"\t"); //replace tab with empty string
             commonBlacklist.Add(@"\n"); //replace new line with empty string
             commonBlacklist.Add(@"\r"); //replace carriage return with empty string
-            commonBlacklist.Add(@"\v");//replace vertical tab with empty string
-               
+            commonBlacklist.Add(@"\v"); //replace vertical tab with empty string
+            commonBlacklist.Add(@"\uFFFD"); //replace U+FFFD REPLACEMENT CHARACTER ('�') with empty string
+
             return commonBlacklist;
         }
 

@@ -179,8 +179,9 @@ namespace ModestSanitizer
                 }
                 else
                 {
-                    tmpResult = strToClean.Normalize(NormalizationForm.FormKC);//just to be extra safe
+                    tmpResult = LimitToASCIIOnly(strToClean);
                  
+                    //limit further
                     tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48<= (int)c && (int)c <= 57) 
                     || (allowSpaces?((int)c==32):false) //32 = space
                     || (allowParens ? (((int)c == 40)|| ((int)c == 41)) : false)//40 and 41 = parens
@@ -203,9 +204,13 @@ namespace ModestSanitizer
         /// </summary>
         /// <param name="strToClean"></param>
         /// <returns></returns>
-        public string LimitToASCIIDateTimesOnly(string strToClean, bool allowSpaces, bool allowParens, bool allowNegativeSign, bool allowCommaAndDot)
+        public string LimitToASCIIDateTimesOnly(string strToClean, Utility.DateDelimiter delimiter, Utility.DateDataType dateDataType, bool allowAMandPM)
         {
             string tmpResult = String.Empty;
+            if (dateDataType == Utility.DateDataType.SQLServerDateTime)
+            {
+                dateDataType = Utility.DateDataType.DateTimeWithMilliseconds;
+            }
 
             try
             {
@@ -216,24 +221,90 @@ namespace ModestSanitizer
                 }
                 else
                 {
-                    tmpResult = strToClean.Normalize(NormalizationForm.FormKC);//just to be extra safe
+                    tmpResult = Truncate.TruncateToValidLength(strToClean, 33);
+                    tmpResult = tmpResult.Normalize(NormalizationForm.FormKC);//just to be extra safe
 
-                    tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
-                    || (allowSpaces ? ((int)c == 32) : false) //32 = space
-                    || (allowParens ? (((int)c == 40) || ((int)c == 41)) : false)//40 and 41 = parens
-                    || (allowCommaAndDot ? ((int)c == 44) : false) //44 = ,
-                    || (allowNegativeSign ? ((int)c == 45) : false) //45 = dash 
-                    || (allowCommaAndDot ? ((int)c == 46) : false) //46 = dot 
+                    if (delimiter == Utility.DateDelimiter.Dash) //Example 12-8-2015 15:15
+                    {
+                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
+                          || ((int)c == 45) //45 = dash
+                          || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                          || ((dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 46) : false) //46 = dot
+                        )).ToArray()));
+                    }
 
-                    )).ToArray()));
+                    if (delimiter == Utility.DateDelimiter.Dot) //Example 12.8.2015 15:15
+                    {
+                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
+                          || ((int)c == 46) //46 = dot 
+                          || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                        )).ToArray()));
+                    }
+
+                    if (delimiter == Utility.DateDelimiter.ForwardSlash) //Example 12/8/2015 15:15
+                    {
+                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
+                          || ((int)c == 47) //47 = forward slash 
+                          || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                          || ((dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 46) : false) //46 = dot             
+                        )).ToArray()));
+                    }
+
+                    if (delimiter == Utility.DateDelimiter.UTCWithDelimiters) //yyyyMMdd'T'HHmmss.SSSZ
+                    {
+                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
+                        || ((int)c == 46) //46 = dot
+                        || (((int)c == 84) || ((int)c == 90) || ((int)c == 32)) //84 = T, 90 = Z, 32 = space
+                        )).ToArray()));
+                    }
+
+                    if (delimiter == Utility.DateDelimiter.UTCWithoutDelimiters) //yyyy-MM-dd'T'HH:mm:ss.SSSZZ  EXAMPLE: 2014-08-29T06:44:03Z
+                    {
+                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
+                        || ((int)c == 45) //45 = dash 
+                        || ((int)c == 58) //58 = colon
+                        || (((int)c == 84) || ((int)c == 90) || ((int)c == 32)) //84 = T, 90 = Z, 32 = space
+                        )).ToArray()));
+                    }
+
+                    //1995-07-14T13:05:00.0000000-03:00
                 }
             }
             catch (Exception ex)
             {
-                TrackOrThrowException("Error limiting unicode to ASCII Numbers Only: ", strToClean, ex);
+                TrackOrThrowException("Error limiting unicode to ASCII DateTimes Only: ", strToClean, ex);
             }
             return tmpResult;
         }
+
+        /// <summary>
+        /// Detect ill-formed UTF-8 sequences in raw bytes. 
+        /// </summary>
+        /// <param name="rawData"></param>
+        /// <returns></returns>
+        public bool DetectIllFormedUTF8Bytes(byte[] rawData)
+        {
+            UTF8Encoding encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: false);
+            return encoding.GetString(rawData).Contains("\uFFFD"); //will replace ill-formed data with U+FFFD REPLACEMENT CHARACTER ('�')
+        }
+                
+        /// <summary>
+        /// Detect ill-formed ASCII characters in raw bytes. 
+        /// </summary>
+        /// <param name="strToClean"></param>
+        /// <returns></returns>
+        public bool DetectIllFormedASCII(byte[] rawData)
+        {
+            ASCIIEncoding encoding = new ASCIIEncoding();
+            return encoding.GetString(rawData).Contains("?"); //will replace ill-formed data with '?'
+        }
+
         private void TrackOrThrowException(string msg, string valToClean, Exception ex)
         {
             string exceptionValue = Truncate.TruncateToValidLength(valToClean, 5);

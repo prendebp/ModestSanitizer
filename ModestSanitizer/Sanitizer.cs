@@ -63,8 +63,8 @@ namespace ModestSanitizer
             CompileRegex = compileRegex;
             Truncate = new Truncate(SanitizerApproach, SaniExceptions);
             NormalizeOrLimit = new NormalizeOrLimit(Truncate, SanitizerApproach, SaniExceptions);
-            MinMax = new MinMax(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
-            FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, compileRegex, SaniExceptions);
+            MinMax = new MinMax(Truncate, NormalizeOrLimit, SanitizerApproach, CompileRegex, SaniExceptions);
+            FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, CompileRegex, SaniExceptions);
             Whitelist = new Whitelist(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
             Blacklist = new Blacklist(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
         }
@@ -77,8 +77,6 @@ namespace ModestSanitizer
         //   OR
         //   5. Check whitelist of valid values ASCII or Unicode (overload)  
         //   Why? To assist with safe whitelisting
-        //   6. Interrogate if hexadecimal? %%, %p,%d,%c,%u,%x,%s,%n,\x
-        //   Why? To protect against format string attacks with unsafe keyword: https://owasp.org/www-community/attacks/Format_string_attack
         //   7. Basic prevention of SQLInjection such as replacing ;,',--,* ... */,<,>,%,Or,xp_,sp_,exec_, or other SQL keywords?
         //   Why? To prevent against SQL Injection attacks if NOT parameterizing queries or using an ORM, or if explicitly using dynamic SQL
         //   8. Filename cleanse??? Path cleanse?

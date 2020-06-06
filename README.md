@@ -5,6 +5,10 @@ For LDAP encoding see Anti-XSS.
 
 **DISCLAIMER:** This library is opinionated in favor of en-US culture and ASCII-compatible characters. Support for international unicode character cleansing is out-of-scope for me at the moment. This is built with .NET 4.6.1 so as to be compatible with legacy .NET applications. (A newer version targeting C# 7 and .Netcore could be beneficial, leveraging Span T for better performance and Memory T for async support.)
 
+**Use this to:** sanitize the arguments passed in to a Console application or sanitize the values read out of a configuration file, such as application settings or a connection string.
+
+**Threat vector:** a hacker who first succeeds in penetrating a network may seek to pivot to other valuable resources or to steal (and exfiltrate) database data. To do so, they may try to run a console app on a given server with random, malicious parameters see what it may do. Or, they may try to tamper with a web server's configuration file to bypass a web application's authentication or role authorization restrictions. They may also seek to point any configurable email addresses to their own email address with a different domain.
+
 **ADVICE:** Validate all input
 
 **RE-STATED:** Developers often don't validate all input. 
@@ -14,7 +18,7 @@ A recognizer could be built using a lexer to break an input string up into conte
 
 However, in the context of ModestSanitizer, I am not parsing anything greater than parameter strings. The sweet spot for this C# code library is maybe parsing string arguments from a legacy console app in order to compare either against (1) an expected format, simple enough to be matched by a Regex expression or against (2) an expected string or list of strings.
 
-So, I haven't built a full-blown lexer or parser, but have merely leveraged the String Equals, String IndexOf, and StringComparison enum, to tokenize and parse in simplest fashion after first either (1) normalizing the unicode or preferably (2) limiting the unicode to ASCII-like (letterlike) characters for security reasons. Unicode has a much greater array of potentially malicious and/or misleading characters.
+So, I haven't built a full-blown lexer or parser, but have merely leveraged the String Equals, or the String IndexOf with StringComparison of OrdinalIgnoreCase (for case insensitive equals), to tokenize and parse in simplest fashion after first either (1) normalizing the unicode or preferably (2) limiting the unicode to ASCII-like (letterlike) characters for security reasons. Unicode has a much greater array of potentially malicious and/or misleading characters.
 
 Overall, I see the process of validating input securely as having two steps: **1. Sanitization and 2. Input Validation**.
 

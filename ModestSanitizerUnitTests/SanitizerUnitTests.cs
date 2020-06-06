@@ -15,6 +15,14 @@ namespace ModestSanitizerUnitTests
         {
             Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
 
+            DateTime? resultSQLServerDateTime = sanitizer.MinMax.ReduceToValidValue("1700-01-25 16:01:36.000", new DateTime(2020,1,1), new DateTime(1753,1,1), Utility.DateDataType.SQLServerDateTime, Utility.DateDelimiter.Dash, MinMax.DateFormat.SQLServer, false);
+
+            Assert.AreEqual(new DateTime(1753, 1, 1, 0, 0, 0), resultSQLServerDateTime);
+
+            //DateTime? resultNegativeSign = sanitizer.MinMax.ReduceToValidValue(tx);
+
+            //Assert.AreEqual(-1220.5365M, resultNegativeSign);
+
             decimal? resultDollarSign = sanitizer.MinMax.ReduceToValidValue("-$100,000.00", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xCommaxDotx);
 
             Assert.AreEqual(-100000.00M, resultDollarSign);
@@ -43,7 +51,6 @@ namespace ModestSanitizerUnitTests
 
             Assert.AreEqual(12.7M, resultInvalidLeadZeroes);
   
-
             int ? result = sanitizer.MinMax.ReduceToValidValue("5", 4, 0);
 
             Assert.AreEqual(4, result);
@@ -99,7 +106,7 @@ namespace ModestSanitizerUnitTests
 
             KeyValuePair<SaniTypes, string> kvp =  sanitizer2.SaniExceptions.Values.FirstOrDefault<KeyValuePair<SaniTypes, string>>();
             Assert.AreEqual(kvp.Key, SaniTypes.MinMax);
-            Assert.AreEqual(kvp.Value, "99999");
+            Assert.AreEqual(kvp.Value, "999999999999999999999999999999999");
 
 
             bool? result6 = sanitizer.MinMax.ReduceToValidValue("false");
