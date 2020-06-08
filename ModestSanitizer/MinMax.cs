@@ -431,7 +431,7 @@ namespace ModestSanitizer
         /// <returns></returns>         
         public DateTime? ReduceToValidValue(string dateToClean, DateTime dateMaxValue, DateTime dateMinValue, Utility.DateDataType dateDataType, Utility.DateDelimiter dateDelimiter, DateFormat dateFormat, bool expectTrailingAMorPM)
         {
-            String strFormat = null;
+            String[] strFormat = null;
             DateTime? tmpResult = null;
 
             try
@@ -476,203 +476,156 @@ namespace ModestSanitizer
                     dateToClean = NormalizeOrLimit.LimitToASCIIDateTimesOnly(dateToClean, dateDelimiter, dateDataType, expectTrailingAMorPM);
 
                     #region Regex checks and strFormat assignment
+
+                    DateRegex dateRegexObj = new DateRegex(CompileRegex);
+
                     //Perform specific Regex checks where possible after having already normalized the unicode string and reduced it to ASCII-like characters.
                     if ((dateDataType == Utility.DateDataType.Date) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
                     {
-                        strFormat = "s"; //Example 6/4/2020
+                        strFormat = new string[] { "M/d/yyyy", "MM/dd/yyyy" }; //Example 6/14/2020
 
-                        //Date in US format with support for leap years. SOURCE: https://owasp.org/www-community/OWASP_Validation_Regex_Repository
-                        string dateRegex = @"^(?:(?:(?:0?[13578]|1[02])(\/|-|\.)31)\1|(?:(?:0?[1,3-9]|1[0-2])(\/|-|\.)(?:29|30)\2))(?:(?:1[6-9]|[2-9]\d)?\d{2})$|^(?:0?2(\/|-|\.)29\3(?:(?:(?:1[6-9]|[2-9]\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00))))$|^(?:(?:0?[1-9])|(?:1[0-2]))(\/|-|\.)(?:0?[1-9]|1\d|2[0-8])\4(?:(?:1[6-9]|[2-9]\d)?\d{2})$";
-
-                        bool matchOnWindows = false;
-                        if (CompileRegex)
+                        if (dateDelimiter == Utility.DateDelimiter.Dot)
                         {
-                             //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                             matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+                            strFormat = new string[] { "M.d.yyyy", "MM.dd.yyyy" };
                         }
-                        else
+                        if (dateDelimiter == Utility.DateDelimiter.Dash)
                         {
-                             matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                            strFormat = new string[] { "M-d-yyyy", "MM-dd-yyyy" };
                         }
-
-                        if (!matchOnWindows)
-                        {
-                             throw new Exception("Fails to match Date Regex in US format mm/dd/yyyy with support for leap years.");
-                        }
+                        dateRegexObj.PerformRegexForDateInUSFormat(dateToClean);
                     }
 
                     if ((dateDataType == Utility.DateDataType.Date) && (dateFormat == DateFormat.Euro)) //Delimiter slash, dash, or dot
                     {
-                        strFormat = "s"; //Example 28/02/2005
+                        strFormat = new string[] { "d/M/yyyy", "dd/MM/yyyy" }; //Example 28/02/2005
 
-                        //Date in Euro format. SOURCE: http://regexlib.com/DisplayPatterns.aspx?cattabindex=4&categoryId=5
-                        //See also explanation here: https://stackoverflow.com/questions/8647893/regular-expression-leap-years-and-more/31408642#31408642
-                        string dateRegex = @"^(?=\d)(?!(?:(?:0?[5-9]|1[0-4])(?:\.|-|\/)10(?:\.|-|\/)(?:1582))|(?:(?:0?[3-9]|1[0-3])(?:\.|-|\/)0?9(?:\.|-|\/)(?:1752)))(31(?!(?:\.|-|\/)(?:0?[2469]|11))|30(?!(?:\.|-|\/)0?2)|(?:29(?:(?!(?:\.|-|\/)0?2(?:\.|-|\/))|(?=\D0?2\D(?:(?!000[04]|(?:(?:1[^0-6]|[2468][^048]|[3579][^26])00))(?:(?:(?:\d\d)(?:[02468][048]|[13579][26])(?!\x20BC))|(?:00(?:42|3[0369]|2[147]|1[258]|09)\x20BC))))))|2[0-8]|1\d|0?[1-9])([-.\/])(1[012]|(?:0?[1-9]))\2((?=(?:00(?:4[0-5]|[0-3]?\d)\x20BC)|(?:\d{4}(?:$|(?=\x20\d)\x20)))\d{4})$";
-
-                        bool matchOnWindows = false;
-                        if (CompileRegex)
+                        if (dateDelimiter == Utility.DateDelimiter.Dot)
                         {
-                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+                            strFormat = new string[] { "d.M.yyyy", "dd.MM.yyyy" };
                         }
-                        else
+                        if (dateDelimiter == Utility.DateDelimiter.Dash)
                         {
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                            strFormat = new string[] { "d-M-yyyy", "dd-MM-yyyy" };
                         }
-
-                        if (!matchOnWindows)
-                        {
-                            throw new Exception("Fails to match Date Regex in Euro format dd/mm/yyyy.");
-                        }
+                        dateRegexObj.PerformRegexForDateInEuroFormat(dateToClean);
                     }
 
                     if ((dateDataType == Utility.DateDataType.Date) && (dateFormat == DateFormat.China)) //Delimiter slash, dash, or dot
                     {
-                        strFormat = "s"; //Example 2009/6/15
+                        strFormat = new string[] { "yyyy/M/d", "yyyy/MM/dd" }; //Example 2009/6/15
 
-                        //Date in China format. SOURCE: http://regexlib.com/DisplayPatterns.aspx?cattabindex=4&categoryId=5
-                        //See also explanation here: https://stackoverflow.com/questions/8647893/regular-expression-leap-years-and-more/31408642#31408642
-                        string dateRegex = @"^(?:(?:(?:(?:(?:1[6-9]|[2-9]\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00)))(\/|-|\.)(?:0?2\1(?:29)))|(?:(?:(?:1[6-9]|[2-9]\d)?\d{2})(\/|-|\.)(?:(?:(?:0?[13578]|1[02])\2(?:31))|(?:(?:0?[1,3-9]|1[0-2])\2(29|30))|(?:(?:0?[1-9])|(?:1[0-2]))\2(?:0?[1-9]|1\d|2[0-8]))))$";
-
-                        bool matchOnWindows = false;
-                        if (CompileRegex)
+                        if (dateDelimiter == Utility.DateDelimiter.Dot)
                         {
-                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+                            strFormat = new string[] { "yyyy.M.d", "yyyy.MM.dd" };
                         }
-                        else
+                        if (dateDelimiter == Utility.DateDelimiter.Dash)
                         {
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                            strFormat = new string[] { "yyyy-M-d", "yyyy-MM-dd" };
                         }
-
-                        if (!matchOnWindows)
-                        {
-                            throw new Exception("Fails to match Date Regex in China format yyyy/mm/dd.");
-                        }
+                        dateRegexObj.PerformRegexForDateInChineseFormat(dateToClean);
                     }
 
                     //Not the best regex here but we still have DateTime.ParseExact further below.
                     if ((dateDataType == Utility.DateDataType.DateTime) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
                     {
-                        strFormat = "g"; //Example 02/18/1753 15:15
+                        strFormat = null; //Example 02/18/1753 15:15  NOTE: capital H indicates 24-hour time.
 
-                        //Date in US format with single space hh:mm
-                        string dateRegex = @"^([0-1]?)([0-9])(\/|-|\.)([0-3]?)([0-9])(\/|-|\.)([0-2])([0-9])([0-9])([0-9]) ([0-2][0-9]\:[0-6][0-9])$";
+                        if (dateDelimiter == Utility.DateDelimiter.ForwardSlash)
+                        {
+                            strFormat = new string[] { "M/d/yyyy H:m", "MM/dd/yyyy H:m" };
+                        }
+                        if (dateDelimiter == Utility.DateDelimiter.Dot)
+                        {
+                            strFormat = new string[] { "M.d.yyyy H:m", "MM.dd.yyyy H:m" };
+                        }
+                        if (dateDelimiter == Utility.DateDelimiter.Dash)
+                        {
+                            strFormat = new string[] { "M-d-yyyy H:m", "MM-dd-yyyy H:m" };
+                        }
 
-                        bool matchOnWindows = false;
-                        if (CompileRegex)
-                        {
-                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-                        }
-                        else
-                        {
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-                        }
-
-                        if (!matchOnWindows)
-                        {
-                            throw new Exception("Fails to match Date Regex in US format with single space hh:mm.");
-                        }
+                        dateRegexObj.PerformRegexForDateTimeInUSFormat(dateToClean);
                     }
 
                     //Not the best regex here but we still have DateTime.ParseExact further below.
-                    if ((dateDataType == Utility.DateDataType.DateTimeWithSeconds) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
+                    if ((dateDataType == Utility.DateDataType.DateTimeWithSeconds) && (dateFormat == DateFormat.US) && !(dateDelimiter == Utility.DateDelimiter.UTCWithDelimiters || dateDelimiter == Utility.DateDelimiter.UTCWithoutDelimiters)) //Delimiter slash, dash, or dot
                     {
-                        strFormat = null; 
-                        //Example 06/05/2009 15:15:33 
-                        //or 06/05/2009 03:15:33 PM
+                        strFormat = null;
+                        //Example 06/05/2009 15:15:33 or 06/05/2009 03:15:33 PM
 
-                        //Date in US format with single space hh:mm:ss and with optional AM or PM
-                        string dateRegex = null;
-
+                        //Date in US format with single space H:m:ss and with optional AM or PM
                         if (expectTrailingAMorPM == false)
                         {
-                            if(dateDelimiter == Utility.DateDelimiter.ForwardSlash) 
+                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) //NOTE: capital H indicates 24-hour time.
                             {
-                                strFormat = "MM/dd/yyyy hh:mm:ss";
+                                strFormat = new string[] { "M/d/yyyy H:m:s", "MM/dd/yyyy H:m:s" };
                             }
                             if (dateDelimiter == Utility.DateDelimiter.Dot)
                             {
-                                strFormat = "MM.dd.yyyy hh:mm:ss";
+                                strFormat = new string[] { "M.d.yyyy H:m:s", "MM.dd.yyyy H:m:s" };
                             }
                             if (dateDelimiter == Utility.DateDelimiter.Dash)
                             {
-                                strFormat = "MM-dd-yyyy hh:mm:ss";
+                                strFormat = new string[] { "M-d-yyyy H:m:s", "MM-dd-yyyy H:m:s" };
                             }
-                            dateRegex = @"^([0-1]?)([0-9])(\/|-|\.)([0-3]?)([0-9])(\/|-|\.)([0-2])([0-9])([0-9])([0-9]) ([0-2]?[0-9]\:[0-6][0-9]\:[0-6][0-9])$";
                         }
                         else //expect AM or PM
                         {
-                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash)
+                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) //NOTE: capital h indicates regular time not military.
                             {
-                                strFormat = "MM/dd/yyyy hh:mm:ss tt";
+                                strFormat = new string[] { "M/d/yyyy h:m:s tt", "M/d/yyyy hh:mm:ss tt", "MM/dd/yyyy h:m:s tt", "MM/dd/yyyy hh:mm:ss tt" };
                             }
                             if (dateDelimiter == Utility.DateDelimiter.Dot)
                             {
-                                strFormat = "MM.dd.yyyy hh:mm:ss tt";
+                                strFormat = new string[] { "M.d.yyyy h:m:s tt", "M.d.yyyy hh:mm:ss tt", "MM.dd.yyyy h:m:s tt", "MM.dd.yyyy hh:mm:ss tt" };
                             }
                             if (dateDelimiter == Utility.DateDelimiter.Dash)
                             {
-                                strFormat = "MM-dd-yyyy hh:mm:ss tt";
+                                strFormat = new string[] { "M-d-yyyy h:m:s tt", "M-d-yyyy hh:mm:ss tt", "MM-dd-yyyy h:m:s tt", "MM-dd-yyyy hh:mm:ss tt" };
                             }
-                            dateRegex = @"^([0-1]?)([0-9])(\/|-|\.)([0-3]?)([0-9])(\/|-|\.)([0-2])([0-9])([0-9])([0-9]) ([0-2]?[0-9]\:[0-6][0-9]\:[0-6][0-9]) ([A|P]M)$";
                         }
-
-                        bool matchOnWindows = false;
-                        if (CompileRegex)
-                        {
-                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-                        }
-                        else
-                        {
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-                        }
-
-                        if (!matchOnWindows)
-                        {
-                            throw new Exception("Fails to match Date Regex in US format with single space hh:mm:ss and with optional AM or PM");
-                        }
+                        dateRegexObj.PerformRegexForDateTimeWithSecondsInUSFormat(dateToClean, expectTrailingAMorPM);
                     }
 
                     //Not the best regex here but we still have DateTime.ParseExact further below.
                     if ((dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
                     {
-                        strFormat = "s"; //Example 06/05/2009 15:15:33.001 OR 06/05/2009 03:05:03.003 PM
+                        strFormat = null; //Example 06/05/2009 15:15:33.001 OR 06/05/2009 03:05:03.003 PM
 
-                        //Date in US format with single space hh:mm:ss.fff and with optional AM or PM
+                        //Date in US format with single space H:m:ss.fff and with optional AM or PM  
                         string dateRegex = null;
 
+                        //NOTE: M = single-digit month is formatted WITHOUT a leading zero. MM = single-digit month is formatted WITH a leading zero.
+                        //      H = single-digit hour is formatted WITHOUT a leading zero.  HH = single-digit hour is formatted WITH a leading zero.
+                        //      d = single-digit day is formatted WITHOUT a leading zero.   dd = single-digit day is formatted WITH a leading zero.
                         if (expectTrailingAMorPM == false)
                         {
-                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash)
+                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) //NOTE: capital H indicates 24-hour time. 
                             {
-                                strFormat = "MM/dd/yyyy hh:mm:ss.fff";
+                                strFormat = new string[] { "M/d/yyyy H:m:s.fff", "MM/dd/yyyy H:m:s.fff", "MM/dd/yyyy HH:mm:ss.fff", "M/d/yyyy HH:m:s.fff" };
                             }
                             if (dateDelimiter == Utility.DateDelimiter.Dot)
                             {
-                                strFormat = "MM.dd.yyyy hh:mm:ss.fff";
+                                strFormat = new string[] { "M.d.yyyy H:m:s.fff", "MM.dd.yyyy H:m:s.fff", "MM.dd.yyyy HH:mm:ss.fff", "M.d.yyyy HH:m:s.fff" };
                             }
                             if (dateDelimiter == Utility.DateDelimiter.Dash)
                             {
-                                strFormat = "MM-dd-yyyy hh:mm:ss.fff";
+                                strFormat = new string[] { "M-d-yyyy H:m:s.fff", "MM-dd-yyyy H:m:s.fff", "MM-dd-yyyy HH:mm:ss.fff", "M-d-yyyy HH:m:s.fff" };
                             }
                             dateRegex = @"^([0-1]?)([0-9])(\/|-|\.)([0-3]?)([0-9])(\/|-|\.)([0-2])([0-9]{3}) ([0-2]?[0-9]\:[0-6][0-9]\:[0-6][0-9]\.[0-9]{3})$";
                         }
                         else //expect AM or PM
                         {
-                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash)
+                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) //NOTE: capital h indicates regular time not military.
                             {
-                                strFormat = "MM/dd/yyyy hh:mm:ss.fff tt";
+                                strFormat = new string[] { "M/d/yyyy h:m:s.fff tt", "M/d/yyyy hh:mm:ss.fff tt", "MM/dd/yyyy h:m:s.fff tt", "MM/dd/yyyy hh:mm:ss.fff tt" };
                             }
                             if (dateDelimiter == Utility.DateDelimiter.Dot)
                             {
-                                strFormat = "MM.dd.yyyy hh:mm:ss.fff tt";
+                                strFormat = new string[] { "M.d.yyyy h:m:s.fff tt", "M.d.yyyy hh:mm:ss.fff tt", "MM.dd.yyyy h:m:s.fff tt", "MM.dd.yyyy hh:mm:ss.fff tt" };
                             }
                             if (dateDelimiter == Utility.DateDelimiter.Dash)
                             {
-                                strFormat = "MM-dd-yyyy hh:mm:ss.fff tt";
+                                strFormat = new string[] { "M-d-yyyy h:m:s.fff tt", "M-d-yyyy hh:mm:ss.fff tt", "MM-dd-yyyy h:m:s.fff tt", "MM-dd-yyyy hh:mm:ss.fff tt" };
                             }
                             dateRegex = @"^([0-1]?)([0-9])(\/|-|\.)([0-3]?)([0-9])(\/|-|\.)([0-2])([0-9]{3}) ([0-2]?[0-9]\:[0-6][0-9]\:[0-6][0-9]\.[0-9]{3}) ([A|P]M)$";
                         }
@@ -690,13 +643,13 @@ namespace ModestSanitizer
 
                         if (!matchOnWindows)
                         {
-                            throw new Exception("Fails to match Date Regex in US format with single space hh:mm:ss.fff and with optional AM or PM.");
+                            throw new Exception("Fails to match Date Regex in US format with single space H:m:ss.fff and with optional AM or PM.");
                         }
                     }
 
                     if ((dateDataType == Utility.DateDataType.SQLServerDateTime) && (dateFormat == DateFormat.SQLServer)) //Delimiter slash, dash, or dot
                     {
-                        strFormat = "yyyy-MM-dd HH:mm:ss.fff"; //Example 2019-01-25 16:01:36.000
+                        strFormat = strFormat = new string[] { "yyyy-MM-dd H:m:s.fff", "yyyy-MM-dd HH:mm:ss.fff" }; //Example 2019-01-25 16:01:36.000
 
                         //Date in SQL Server format
                         string dateRegex = null;
@@ -722,53 +675,19 @@ namespace ModestSanitizer
 
                     if (dateDelimiter == Utility.DateDelimiter.UTCWithDelimiters)
                     {
-                        strFormat = "yyyy-MM-ddTHH:mm:ss"; //Example 2015-12-08T15:15:19
-                                           
-                        //Date in UTC format where string must contain only date-time and no other chars. 
-                        //SOURCE: https://stackoverflow.com/questions/25568134/regex-to-verify-utc-date-time-format
-                        string dateRegex = @"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$";
+                        //Example 2015-12-08T15:15:19
+                        strFormat = new string[] { "yyyy-MM-dd'T'H:m:s", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'H:m:s'Z'", "yyyy-MM-dd'T'HH:mm:ss'Z'" };
 
-                        bool matchOnWindows = false;
-                        if (CompileRegex)
-                        {
-                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-                        }
-                        else
-                        {
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-                        }
-
-                        if (!matchOnWindows)
-                        {
-                            throw new Exception("Invalid date: format fails to match UTC with delimiters.");
-                        }
+                        dateRegexObj.PerformRegexForDateTimeWithSecondsAsUTCWithDelimiters(dateToClean);
                     }
 
                     if (dateDelimiter == Utility.DateDelimiter.UTCWithoutDelimiters)
                     {
-                        strFormat = "yyyyMMddTHHmmss"; //Example 20151208T151519
-                        //yyyyMMdd'T'HHmmss.SSSZ with Milliseconds?
+                        strFormat = new string[] { "yyyyMMdd'T'HHmmss", "yyyyMMdd'T'Hms", "yyyyMd'T'Hms" }; //Example 20151208T151519
 
-                        //Date in UTC format where string must contain only date-time and no other chars. 
-                        //SOURCE: https://stackoverflow.com/questions/25568134/regex-to-verify-utc-date-time-format
-                        string dateRegex = @"^[0-9]{4}[0-9]{2}[0-9]{2}T[0-9]{2}[0-9]{2}[0-9]{2}$"; //no trailing Z
+                        //TODO: support yyyyMMdd'T'HHmmss.SSSZ with Milliseconds ?!?
 
-                        bool matchOnWindows = false;
-                        if (CompileRegex)
-                        {
-                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-                        }
-                        else
-                        {
-                            matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-                        }
-
-                        if (!matchOnWindows)
-                        {
-                            throw new Exception("Invalid date: format fails to match UTC without delimiters.");
-                        }
+                        dateRegexObj.PerformRegexForDateTimeWithSecondsAsUTCWithoutDelimiters(dateToClean);
                     }
                     #endregion
 
@@ -788,10 +707,10 @@ namespace ModestSanitizer
                     {
                         culture = CultureInfo.CreateSpecificCulture("zh-CN");//China
                     }
-                                        
+
                     try
                     {
-                        value = DateTime.ParseExact(dateToClean, strFormat, culture);
+                        value = DateTime.ParseExact(dateToClean, strFormat, culture, DateTimeStyles.None);
                     }
                     catch (FormatException)
                     {

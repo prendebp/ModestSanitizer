@@ -7,7 +7,7 @@ For LDAP encoding see Anti-XSS.
 
 **Use this to:** sanitize the arguments passed in to a Console application or sanitize the values read out of a configuration file, such as application settings or a connection string.
 
-**Threat vector:** a hacker who first succeeds in penetrating a network may seek to pivot to other valuable resources or to steal (and exfiltrate) database data. To do so, they may try to run a console app on a given server with random, malicious parameters see what it may do. Or, they may try to tamper with a web server's configuration file to bypass a web application's authentication or role authorization restrictions. They may also seek to point any configurable email addresses to their own email address with a different domain.
+**Threat vector:** a hacker who first succeeds in penetrating a network may seek to pivot to other valuable resources or to steal (and exfiltrate) database data. To do so, they may try to run a console app on a given server with random, malicious parameters to see what it may do. Or, they may try to tamper with a web server's configuration file to bypass a web application's authentication or role authorization restrictions. They may also seek to point any configurable email addresses to their own email address with a different domain.
 
 **ADVICE:** Validate all input
 
@@ -42,11 +42,7 @@ Assert.AreEqual("aiti", stringLimitedToLetterlikeChars);
 //ready for comparison against a whitelist!
 ```
 
-Also, see below for an example of a whitelisting failure. 
-
-A whitelist of applications by name somewhat works by limiting users to run only valid programs (such as installutil.exe) but since installutil.exe may be tricked into running another executable, the whitelist has been effectively bypassed. Try to look for such loopholes in your own whitelisting efforts?
-
-SOURCE: https://attackiq.com/blog/2018/05/21/application-whitelist-bypass/
+Always try to look for loopholes in your whitelisting efforts.
 
 # ModestSanitizer Usage
 
@@ -54,7 +50,7 @@ The ModestSanitizer is defined to sanitize input parameters in multiple steps.
 
 * The first step is to truncate to a predefined character limit.
 
-* The second step is to review (and log/alert on) the input strings against any appropriate blacklists. This step should likely be set to TrackExceptionsInList only so as not to automatically stop the program if a malicious string is found. This is primarily a monitoring step. The whitelist step would likely be a more appropriate place to perform a full stop.
+* The second step is to review (and log/alert on) the input strings against any appropriate blacklists. This step should likely be set to TrackExceptionsInList only so as not to automatically stop the program if a malicious string is found. This is primarily a monitoring step. The following steps would likely be a more appropriate place to perform a full stop if an exception is found.
 
 * The third step (MinMax) is to convert from strings to other data types, as needed, doing so with pre-defined minimum and maximum values.
 

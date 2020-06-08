@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Blacklist.cs" />
+    <Compile Include="Regex\DateRegex.cs" />
     <Compile Include="Utility.cs" />
     <Compile Include="Whitelist.cs" />
     <Compile Include="FileNameCleanse.cs" />

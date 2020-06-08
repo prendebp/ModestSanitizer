@@ -19,9 +19,29 @@ namespace ModestSanitizerUnitTests
 
             Assert.AreEqual(new DateTime(1753, 1, 1, 0, 0, 0), resultSQLServerDateTime);
 
-            //DateTime? resultNegativeSign = sanitizer.MinMax.ReduceToValidValue(tx);
+            DateTime? resultDateInUSFormat = sanitizer.MinMax.ReduceToValidValue("1/25/1970", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.Date, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
 
-            //Assert.AreEqual(-1220.5365M, resultNegativeSign);
+            Assert.AreEqual(new DateTime(1970, 1, 25, 0, 0, 0), resultDateInUSFormat);
+
+            DateTime? resultDateInEuroFormat = sanitizer.MinMax.ReduceToValidValue("26-01-1970", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.Date, Utility.DateDelimiter.Dash, MinMax.DateFormat.Euro, false);
+
+            Assert.AreEqual(new DateTime(1970, 1, 26, 0, 0, 0), resultDateInEuroFormat);
+
+            DateTime? resultDateInUSFormatWithTime = sanitizer.MinMax.ReduceToValidValue("02/18/1953 15:15", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTime, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
+
+            Assert.AreEqual(new DateTime(1953, 2, 18, 15, 15, 0), resultDateInUSFormatWithTime);
+
+            DateTime? resultDateInUSFormatWithTimeMilliseconds = sanitizer.MinMax.ReduceToValidValue("06/05/2009 03:05:03.003 PM", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithMilliseconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, true);
+
+            Assert.AreEqual(new DateTime(2009, 6, 5, 15, 5, 3, 3), resultDateInUSFormatWithTimeMilliseconds);
+            
+            DateTime? resultDateTimeWithUTCWithDelimiters = sanitizer.MinMax.ReduceToValidValue("2015-12-08T15:15:19", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.UTCWithDelimiters, MinMax.DateFormat.US, false);
+
+            Assert.AreEqual(new DateTime(2015, 12, 8, 15, 15, 19), resultDateTimeWithUTCWithDelimiters);
+
+            DateTime? resultDateTimeWithUTCWithoutDelimiters = sanitizer.MinMax.ReduceToValidValue("20151208T151519", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.UTCWithoutDelimiters, MinMax.DateFormat.US, false);
+
+            Assert.AreEqual(new DateTime(2015, 12, 8, 15, 15, 19), resultDateTimeWithUTCWithoutDelimiters);
 
             decimal? resultDollarSign = sanitizer.MinMax.ReduceToValidValue("-$100,000.00", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xCommaxDotx);
 

@@ -209,7 +209,7 @@ namespace ModestSanitizer
             string tmpResult = String.Empty;
             if (dateDataType == Utility.DateDataType.SQLServerDateTime)
             {
-                dateDataType = Utility.DateDataType.DateTimeWithMilliseconds;
+                dateDataType = Utility.DateDataType.DateTimeWithMilliseconds; //retain colon and space
             }
 
             try
@@ -224,7 +224,8 @@ namespace ModestSanitizer
                     tmpResult = Truncate.TruncateToValidLength(strToClean, 33);
                     tmpResult = tmpResult.Normalize(NormalizationForm.FormKC);//just to be extra safe
 
-                    if (delimiter == Utility.DateDelimiter.Dash) //Example 12-8-2015 15:15
+                    //Example 12-8-2015 15:15
+                    if (delimiter == Utility.DateDelimiter.Dash && !(delimiter == Utility.DateDelimiter.UTCWithDelimiters || delimiter == Utility.DateDelimiter.UTCWithoutDelimiters))
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
                           || ((int)c == 45) //45 = dash
@@ -235,7 +236,8 @@ namespace ModestSanitizer
                         )).ToArray()));
                     }
 
-                    if (delimiter == Utility.DateDelimiter.Dot) //Example 12.8.2015 15:15
+                    //Example 12.8.2015 15:15
+                    if (delimiter == Utility.DateDelimiter.Dot && !(delimiter == Utility.DateDelimiter.UTCWithDelimiters || delimiter == Utility.DateDelimiter.UTCWithoutDelimiters)) 
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
                           || ((int)c == 46) //46 = dot 
@@ -245,7 +247,8 @@ namespace ModestSanitizer
                         )).ToArray()));
                     }
 
-                    if (delimiter == Utility.DateDelimiter.ForwardSlash) //Example 12/8/2015 15:15
+                    //Example 12/8/2015 15:15
+                    if (delimiter == Utility.DateDelimiter.ForwardSlash && !(delimiter == Utility.DateDelimiter.UTCWithDelimiters || delimiter == Utility.DateDelimiter.UTCWithoutDelimiters)) 
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
                           || ((int)c == 47) //47 = forward slash 
@@ -256,7 +259,7 @@ namespace ModestSanitizer
                         )).ToArray()));
                     }
 
-                    if (delimiter == Utility.DateDelimiter.UTCWithDelimiters) //yyyyMMdd'T'HHmmss.SSSZ
+                    if (delimiter == Utility.DateDelimiter.UTCWithoutDelimiters) //yyyyMMdd'T'HHmmss.SSSZ
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
                         || ((int)c == 46) //46 = dot
@@ -264,7 +267,7 @@ namespace ModestSanitizer
                         )).ToArray()));
                     }
 
-                    if (delimiter == Utility.DateDelimiter.UTCWithoutDelimiters) //yyyy-MM-dd'T'HH:mm:ss.SSSZZ  EXAMPLE: 2014-08-29T06:44:03Z
+                    if (delimiter == Utility.DateDelimiter.UTCWithDelimiters) //yyyy-MM-dd'T'HH:mm:ss.SSSZZ  EXAMPLE: 2014-08-29T06:44:03Z
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
                         || ((int)c == 45) //45 = dash 
@@ -273,7 +276,7 @@ namespace ModestSanitizer
                         )).ToArray()));
                     }
 
-                    //1995-07-14T13:05:00.0000000-03:00
+                    //TODO: support 1995-07-14T13:05:00.0000000-03:00 ?!?
                 }
             }
             catch (Exception ex)
