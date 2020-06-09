@@ -27,14 +27,30 @@ namespace ModestSanitizerUnitTests
 
             Assert.AreEqual(new DateTime(1970, 1, 26, 0, 0, 0), resultDateInEuroFormat);
 
+            DateTime? resultDateInChineseFormat = sanitizer.MinMax.ReduceToValidValue("2009.06.15", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.Date, Utility.DateDelimiter.Dot, MinMax.DateFormat.China, false);
+
+            Assert.AreEqual(new DateTime(2009, 6, 15, 0, 0, 0), resultDateInChineseFormat);
+            
             DateTime? resultDateInUSFormatWithTime = sanitizer.MinMax.ReduceToValidValue("02/18/1953 15:15", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTime, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
 
             Assert.AreEqual(new DateTime(1953, 2, 18, 15, 15, 0), resultDateInUSFormatWithTime);
 
-            DateTime? resultDateInUSFormatWithTimeMilliseconds = sanitizer.MinMax.ReduceToValidValue("06/05/2009 03:05:03.003 PM", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithMilliseconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, true);
+            DateTime? resultDateInUSFormatWithTimeSeconds = sanitizer.MinMax.ReduceToValidValue("06/08/1953 15:15:33", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
 
-            Assert.AreEqual(new DateTime(2009, 6, 5, 15, 5, 3, 3), resultDateInUSFormatWithTimeMilliseconds);
-            
+            Assert.AreEqual(new DateTime(1953, 6, 8, 15, 15, 33), resultDateInUSFormatWithTimeSeconds);
+
+            DateTime? resultDateInUSFormatWithTimeSecondsAMPM = sanitizer.MinMax.ReduceToValidValue("06/15/2009 03:05:03 PM", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, true);
+
+            Assert.AreEqual(new DateTime(2009, 6, 15, 15, 5, 3, 0), resultDateInUSFormatWithTimeSecondsAMPM);
+
+            DateTime? resultDateInUSFormatWithTimeMilliseconds = sanitizer.MinMax.ReduceToValidValue("06/05/2009 03:05:03.003", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithMilliseconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
+
+            Assert.AreEqual(new DateTime(2009, 6, 5, 3, 5, 3, 3), resultDateInUSFormatWithTimeMilliseconds); //since no AM or PM specified, the above is 3:05 AM.
+
+            DateTime? resultDateInUSFormatWithTimeMillisecondsAMPM = sanitizer.MinMax.ReduceToValidValue("06/05/2009 03:05:03.003 PM", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithMilliseconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, true);
+
+            Assert.AreEqual(new DateTime(2009, 6, 5, 15, 5, 3, 3), resultDateInUSFormatWithTimeMillisecondsAMPM); //this is 3:05 PM or 15:05 in 24-hr time
+
             DateTime? resultDateTimeWithUTCWithDelimiters = sanitizer.MinMax.ReduceToValidValue("2015-12-08T15:15:19", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.UTCWithDelimiters, MinMax.DateFormat.US, false);
 
             Assert.AreEqual(new DateTime(2015, 12, 8, 15, 15, 19), resultDateTimeWithUTCWithDelimiters);

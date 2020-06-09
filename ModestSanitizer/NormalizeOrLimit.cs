@@ -223,15 +223,15 @@ namespace ModestSanitizer
                 {
                     tmpResult = Truncate.TruncateToValidLength(strToClean, 33);
                     tmpResult = tmpResult.Normalize(NormalizationForm.FormKC);//just to be extra safe
-
+                  
                     //Example 12-8-2015 15:15
                     if (delimiter == Utility.DateDelimiter.Dash && !(delimiter == Utility.DateDelimiter.UTCWithDelimiters || delimiter == Utility.DateDelimiter.UTCWithoutDelimiters))
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
                           || ((int)c == 45) //45 = dash
                           || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
                           || ((dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 46) : false) //46 = dot
                         )).ToArray()));
                     }
@@ -242,8 +242,8 @@ namespace ModestSanitizer
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
                           || ((int)c == 46) //46 = dot 
                           || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
                         )).ToArray()));
                     }
 
@@ -253,8 +253,8 @@ namespace ModestSanitizer
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
                           || ((int)c == 47) //47 = forward slash 
                           || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
                           || ((dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 46) : false) //46 = dot             
                         )).ToArray()));
                     }
