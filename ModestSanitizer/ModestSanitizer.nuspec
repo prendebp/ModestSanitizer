@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>ModestSanitizer_prendebp</id>
+    <version>1.1.1-alpha</version>
+    <title>ModestSanitizer</title>
+    <authors>Bryan Prendergast</authors>
+    <owners>Bryan Prendergast</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/prendebp/ModestSanitizer</projectUrl>
+    <iconUrl>https://github.com/prendebp/ModestSanitizer/raw/master/ModSaniIcon.png</iconUrl>
+    <icon>images\ModSaniIcon.png</icon>
+    <description>Reasonably secure general purpose C# library to sanitize input that does NOT require output encoding</description>
+    <releaseNotes>Initial release.</releaseNotes>
+    <copyright>Copyright 2020</copyright>
+    <tags>Sanitizer Validation Regex</tags>
+  </metadata>
+<files>
+<file src="..\ModSaniIcon.png" target="images\" />
+<file src="lib\**" target="lib/{framework name}[{version}]" />
+</files>
+</package>

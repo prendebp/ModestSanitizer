@@ -116,7 +116,7 @@ namespace ModestSanitizerUnitTests
             {
                 sanitizer.MinMax.ReduceToValidValue("999999999999999999999999999999999", 50, -50);
             }
-            catch (SanitizerException se)
+            catch (SanitizerException)
             {
                 wasExceptionThrown = true;
             }
@@ -131,7 +131,7 @@ namespace ModestSanitizerUnitTests
             {
                 sanitizer2.MinMax.ReduceToValidValue("999999999999999999999999999999999", 50, -50);
             }
-            catch (SanitizerException se)
+            catch (SanitizerException)
             {
                 wasExceptionThrown = true;
             }
@@ -163,7 +163,7 @@ namespace ModestSanitizerUnitTests
             {
                 bool? result9 = sanitizer.MinMax.ReduceToValidValue("1");
             }
-            catch (SanitizerException se)
+            catch (SanitizerException)
             {
                 wasExceptionThrown = true;
             }
@@ -176,7 +176,7 @@ namespace ModestSanitizerUnitTests
             {
                 bool? result10 = sanitizer.MinMax.ReduceToValidValue("a bad value");
             }
-            catch (SanitizerException se)
+            catch (SanitizerException)
             {
                 wasExceptionThrown = true;
             }
@@ -454,7 +454,7 @@ namespace ModestSanitizerUnitTests
                 //Test #6 - should track exception for no file extension
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("999999999999999999999999999999999", 50, false, null, true, true, true, true, true);
             }
-            catch (SanitizerException se)
+            catch (SanitizerException)
             {
                 wasExceptionThrown = true;
             }
@@ -487,7 +487,7 @@ namespace ModestSanitizerUnitTests
                 //test blacklist for Office files - set disallow to true
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("abc.docx", 50, false, null, false, false, true, false, false);
             }
-            catch (SanitizerException se)
+            catch (SanitizerException)
             {
                 wasExceptionThrown = true;
             }
