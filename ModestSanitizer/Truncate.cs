@@ -14,19 +14,19 @@ namespace ModestSanitizer
     ///  </summary>
     public class Truncate
     {
-        public SaniApproach SanitizerApproach { get; set; }
+        public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
         public Truncate()
         {
         }
 
-        public Truncate(SaniApproach sanitizerApproach)
+        public Truncate(Approach sanitizerApproach)
         {
             SanitizerApproach = sanitizerApproach;
         }
 
-        public Truncate(SaniApproach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
+        public Truncate(Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
         {
             SaniExceptions = saniExceptions;
         }
@@ -36,7 +36,7 @@ namespace ModestSanitizer
         /// </summary>
         /// <param name="strToClean"></param>
         /// <returns></returns>   
-        public string TruncateToValidLength(string strToClean, int strMaxLength)
+        public string ToValidLength(string strToClean, int strMaxLength)
         {
             string tmpResult = String.Empty;
 
@@ -67,9 +67,9 @@ namespace ModestSanitizer
         
         private void TrackOrThrowException(string valToClean, Exception ex)
         {
-            string exceptionValue = TruncateToValidLength(valToClean, 5);
+            string exceptionValue = ToValidLength(valToClean, 5);
 
-            if (SanitizerApproach == SaniApproach.TrackExceptionsInList)
+            if (SanitizerApproach == Approach.TrackExceptionsInList)
             {
                 SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.Truncate, exceptionValue));
             }

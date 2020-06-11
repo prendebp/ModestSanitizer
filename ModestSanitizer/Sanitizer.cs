@@ -25,7 +25,7 @@ namespace ModestSanitizer
             Blacklist = 7
         }
 
-        public enum SaniApproach
+        public enum Approach
         {
             None = 0,
             TrackExceptionsInList = 1,
@@ -43,7 +43,7 @@ namespace ModestSanitizer
         /// <summary>
         /// Sanitizer Approach to Exceptions
         /// </summary>
-        public SaniApproach SanitizerApproach { get; set; }
+        public Approach SanitizerApproach { get; set; }
         public MinMax MinMax {get;set;}
         public Truncate Truncate { get; set; }
         public NormalizeOrLimit NormalizeOrLimit { get; set; }
@@ -53,9 +53,9 @@ namespace ModestSanitizer
         public bool CompileRegex { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
-        public Sanitizer(SaniApproach sanitizerApproach, bool compileRegex) {
+        public Sanitizer(Approach sanitizerApproach, bool compileRegex) {
             SanitizerApproach = sanitizerApproach;
-            if (sanitizerApproach == SaniApproach.TrackExceptionsInList)
+            if (sanitizerApproach == Approach.TrackExceptionsInList)
             {
                 SaniExceptions = new Dictionary<Guid, KeyValuePair<SaniTypes, string>>();
             }

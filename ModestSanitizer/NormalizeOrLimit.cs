@@ -10,25 +10,25 @@ namespace ModestSanitizer
 {
     /// <summary>
     ///  NormalizeOrLimit = 3
-    ///  NormalizeUnicode or LimitToASCIIOnly
+    ///  NormalizeUnicode or ToASCIIOnly
     //   Why? To assist with safe whitelisting
     /// </summary>
     public class NormalizeOrLimit
     {
-        public Truncate Truncate { get; set; }
-        public SaniApproach SanitizerApproach { get; set; }
+        private Truncate Truncate { get; set; }
+        public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
         public NormalizeOrLimit()
         {
         }
 
-        public NormalizeOrLimit(SaniApproach sanitizerApproach)
+        public NormalizeOrLimit(Approach sanitizerApproach)
         {
             SanitizerApproach = sanitizerApproach;
         }
 
-        public NormalizeOrLimit(Truncate truncate, SaniApproach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
+        public NormalizeOrLimit(Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
         {
             Truncate = truncate;
             SaniExceptions = saniExceptions;
@@ -78,7 +78,7 @@ namespace ModestSanitizer
         /// </summary>
         /// <param name="strToClean"></param>
         /// <returns></returns>
-        public string LimitToASCIIOnly(string strToClean)
+        public string ToASCIIOnly(string strToClean)
         {
             string tmpResult = String.Empty;
             bool removeAccents = true;
@@ -166,7 +166,7 @@ namespace ModestSanitizer
         /// </summary>
         /// <param name="strToClean"></param>
         /// <returns></returns>
-        public string LimitToASCIINumbersOnly(string strToClean, bool allowSpaces, bool allowParens, bool allowNegativeSign, bool allowCommaAndDot)
+        public string ToASCIINumbersOnly(string strToClean, bool allowSpaces, bool allowParens, bool allowNegativeSign, bool allowCommaAndDot)
         {
             string tmpResult = String.Empty;
 
@@ -179,7 +179,7 @@ namespace ModestSanitizer
                 }
                 else
                 {
-                    tmpResult = LimitToASCIIOnly(strToClean);
+                    tmpResult = ToASCIIOnly(strToClean);
                  
                     //limit further
                     tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48<= (int)c && (int)c <= 57) 
@@ -204,12 +204,12 @@ namespace ModestSanitizer
         /// </summary>
         /// <param name="strToClean"></param>
         /// <returns></returns>
-        public string LimitToASCIIDateTimesOnly(string strToClean, Utility.DateDelimiter delimiter, Utility.DateDataType dateDataType, bool allowAMandPM)
+        public string ToASCIIDateTimesOnly(string strToClean, DateUtil.Delim delimiter, DateUtil.DataType dateDataType, bool allowAMandPM)
         {
             string tmpResult = String.Empty;
-            if (dateDataType == Utility.DateDataType.SQLServerDateTime)
+            if (dateDataType == DateUtil.DataType.SQLServerDateTime)
             {
-                dateDataType = Utility.DateDataType.DateTimeWithMilliseconds; //retain colon and space
+                dateDataType = DateUtil.DataType.DateTimeWithMilliseconds; //retain colon and space
             }
 
             try
@@ -221,53 +221,63 @@ namespace ModestSanitizer
                 }
                 else
                 {
-                    tmpResult = Truncate.TruncateToValidLength(strToClean, 33);
+                    tmpResult = Truncate.ToValidLength(strToClean, 33);
                     tmpResult = tmpResult.Normalize(NormalizationForm.FormKC);//just to be extra safe
                   
                     //Example 12-8-2015 15:15
-                    if (delimiter == Utility.DateDelimiter.Dash && !(delimiter == Utility.DateDelimiter.UTCWithDelimiters || delimiter == Utility.DateDelimiter.UTCWithoutDelimiters))
+                    if (delimiter == DateUtil.Delim.Dash && !(delimiter == DateUtil.Delim.UTCWithDelimiters || delimiter == DateUtil.Delim.UTCWithoutDelimiters || delimiter == DateUtil.Delim.UTCWithDelimitersAndZone))
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
                           || ((int)c == 45) //45 = dash
                           || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
-                          || ((dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 46) : false) //46 = dot
+                          || ((dateDataType == DateUtil.DataType.DateTime || dateDataType == DateUtil.DataType.DateTimeWithSeconds || dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == DateUtil.DataType.DateTime || dateDataType == DateUtil.DataType.DateTimeWithSeconds || dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                          || ((dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) ? ((int)c == 46) : false) //46 = dot
                         )).ToArray()));
                     }
 
                     //Example 12.8.2015 15:15
-                    if (delimiter == Utility.DateDelimiter.Dot && !(delimiter == Utility.DateDelimiter.UTCWithDelimiters || delimiter == Utility.DateDelimiter.UTCWithoutDelimiters)) 
+                    if (delimiter == DateUtil.Delim.Dot && !(delimiter == DateUtil.Delim.UTCWithDelimiters || delimiter == DateUtil.Delim.UTCWithoutDelimiters || delimiter == DateUtil.Delim.UTCWithDelimitersAndZone)) 
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
                           || ((int)c == 46) //46 = dot 
                           || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                          || ((dateDataType == DateUtil.DataType.DateTime || dateDataType == DateUtil.DataType.DateTimeWithSeconds || dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == DateUtil.DataType.DateTime || dateDataType == DateUtil.DataType.DateTimeWithSeconds || dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
                         )).ToArray()));
                     }
 
                     //Example 12/8/2015 15:15
-                    if (delimiter == Utility.DateDelimiter.ForwardSlash && !(delimiter == Utility.DateDelimiter.UTCWithDelimiters || delimiter == Utility.DateDelimiter.UTCWithoutDelimiters)) 
+                    if (delimiter == DateUtil.Delim.ForwardSlash && !(delimiter == DateUtil.Delim.UTCWithDelimiters || delimiter == DateUtil.Delim.UTCWithoutDelimiters || delimiter == DateUtil.Delim.UTCWithDelimitersAndZone)) 
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57)
                           || ((int)c == 47) //47 = forward slash 
                           || (allowAMandPM ? (((int)c == 65) || ((int)c == 77) || ((int)c == 80) || ((int)c == 97) || ((int)c == 109) || ((int)c == 112)) : false) //65 = A , 77 = M, 80 = P, 97 = a, 109 = m, 112 = p
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
-                          || ((dateDataType == Utility.DateDataType.DateTime || dateDataType == Utility.DateDataType.DateTimeWithSeconds || dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
-                          || ((dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) ? ((int)c == 46) : false) //46 = dot             
+                          || ((dateDataType == DateUtil.DataType.DateTime || dateDataType == DateUtil.DataType.DateTimeWithSeconds || dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) ? ((int)c == 32) : false) //32 = space
+                          || ((dateDataType == DateUtil.DataType.DateTime || dateDataType == DateUtil.DataType.DateTimeWithSeconds || dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) ? ((int)c == 58) : false) //58 = colon
+                          || ((dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) ? ((int)c == 46) : false) //46 = dot             
                         )).ToArray()));
                     }
 
-                    if (delimiter == Utility.DateDelimiter.UTCWithoutDelimiters) //yyyyMMdd'T'HHmmss.SSSZ
+                    if (delimiter == DateUtil.Delim.UTCWithoutDelimiters) //yyyyMMdd'T'HHmmss.SSSZ
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
                         || ((int)c == 46) //46 = dot
                         || (((int)c == 84) || ((int)c == 90) || ((int)c == 32)) //84 = T, 90 = Z, 32 = space
                         )).ToArray()));
                     }
+                                         
+                    if (delimiter == DateUtil.Delim.UTCWithDelimitersAndZone) //yyyy-MM-dd'T'HH:mm:ssK EXAMPLE: 2020-06-10T22:03:15-05:00
+                    {
+                        tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
+                        || ((int)c == 45) //45 = dash and minus sign
+                        || ((int)c == 58) //58 = colon
+                        || ((int)c == 43) //43 = plus sign
+                        || (((int)c == 84) || ((int)c == 90) || ((int)c == 32)) //84 = T, 90 = Z, 32 = space
+                        )).ToArray()));
+                    }
 
-                    if (delimiter == Utility.DateDelimiter.UTCWithDelimiters) //yyyy-MM-dd'T'HH:mm:ss.SSSZZ  EXAMPLE: 2014-08-29T06:44:03Z
+                    if (delimiter == DateUtil.Delim.UTCWithDelimiters) //yyyy-MM-dd'T'HH:mm:ss.SSSZZ  EXAMPLE: 2014-08-29T06:44:03Z
                     {
                         tmpResult = (new string(tmpResult.ToCharArray().Where(c => ((48 <= (int)c && (int)c <= 57) //Latin numbers
                         || ((int)c == 45) //45 = dash 
@@ -291,7 +301,7 @@ namespace ModestSanitizer
         /// </summary>
         /// <param name="rawData"></param>
         /// <returns></returns>
-        public bool DetectIllFormedUTF8Bytes(byte[] rawData)
+        public bool DetectMalformedUTF8Bytes(byte[] rawData)
         {
             UTF8Encoding encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: false);
             return encoding.GetString(rawData).Contains("\uFFFD"); //will replace ill-formed data with U+FFFD REPLACEMENT CHARACTER ('�')
@@ -302,7 +312,7 @@ namespace ModestSanitizer
         /// </summary>
         /// <param name="strToClean"></param>
         /// <returns></returns>
-        public bool DetectIllFormedASCII(byte[] rawData)
+        public bool DetectMalformedASCII(byte[] rawData)
         {
             ASCIIEncoding encoding = new ASCIIEncoding();
             return encoding.GetString(rawData).Contains("?"); //will replace ill-formed data with '?'
@@ -310,9 +320,9 @@ namespace ModestSanitizer
 
         private void TrackOrThrowException(string msg, string valToClean, Exception ex)
         {
-            string exceptionValue = Truncate.TruncateToValidLength(valToClean, 5);
+            string exceptionValue = Truncate.ToValidLength(valToClean, 5);
 
-            if (SanitizerApproach == SaniApproach.TrackExceptionsInList)
+            if (SanitizerApproach == Approach.TrackExceptionsInList)
             {
                 SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.NormalizeOrLimit, exceptionValue));
             }

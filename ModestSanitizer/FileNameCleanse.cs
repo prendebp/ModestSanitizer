@@ -17,21 +17,21 @@ namespace ModestSanitizer
     public class FileNameCleanse
     {
         public bool CompileRegex { get; set; }
-        public Truncate Truncate { get; set; }
-        public NormalizeOrLimit NormalizeOrLimit { get; set; }
-        public SaniApproach SanitizerApproach { get; set; }
+        private Truncate Truncate { get; set; }
+        private NormalizeOrLimit NormalizeOrLimit { get; set; }
+        public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
         public FileNameCleanse()
         {
         }
 
-        public FileNameCleanse(SaniApproach sanitizerApproach)
+        public FileNameCleanse(Approach sanitizerApproach)
         {
             SanitizerApproach = sanitizerApproach;
         }
 
-        public FileNameCleanse(Truncate truncate, NormalizeOrLimit normalizeOrLimit, SaniApproach sanitizerApproach, bool compileRegex, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
+        public FileNameCleanse(Truncate truncate, NormalizeOrLimit normalizeOrLimit, Approach sanitizerApproach, bool compileRegex, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
         {
             Truncate = truncate;
             NormalizeOrLimit = normalizeOrLimit;
@@ -59,7 +59,7 @@ namespace ModestSanitizer
                 }
                 else
                 {
-                    tmpResult = Truncate.TruncateToValidLength(filename, maxLength);
+                    tmpResult = Truncate.ToValidLength(filename, maxLength);
 
                     //check for malicious Unicode prior to normalizing and reducing to ASCII-like characters
                     if (ContainsMaliciousCharacters(ref tmpResult))
@@ -68,7 +68,7 @@ namespace ModestSanitizer
                     }
 
                     //normalize prior to checking for dot characters to prevent unicode characters similar to dot
-                    tmpResult = NormalizeOrLimit.LimitToASCIIOnly(tmpResult);
+                    tmpResult = NormalizeOrLimit.ToASCIIOnly(tmpResult);
 
                     //check for dot characters
                     char dot = '.';
@@ -400,9 +400,9 @@ namespace ModestSanitizer
 
         private void TrackOrThrowException(string msg, string valToClean, Exception ex)
         {
-            string exceptionValue = Truncate.TruncateToValidLength(valToClean, 15); //allow a few more characters than normal for troubleshooting filenames
+            string exceptionValue = Truncate.ToValidLength(valToClean, 15); //allow a few more characters than normal for troubleshooting filenames
 
-            if (SanitizerApproach == SaniApproach.TrackExceptionsInList)
+            if (SanitizerApproach == Approach.TrackExceptionsInList)
             {
                 string exceptionMsg = String.Empty;
                 if (ex != null && ex.Message!= null)

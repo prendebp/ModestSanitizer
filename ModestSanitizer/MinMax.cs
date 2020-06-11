@@ -11,89 +11,117 @@ namespace ModestSanitizer
 {
     /// <summary>
     ///  MinMax = 1
-    ///  ReduceToValidValue (e.g. max value of a number)
+    ///  ToValidValue (e.g. max value of a number)
     //   Why? To protect against buffer overflow attacks, e.g. if using unsafe keyword: https://stackoverflow.com/questions/9343665/are-buffer-overflow-exploits-possible-in-c
     /// </summary>
     public class MinMax
     {
         public bool CompileRegex { get; set; }
-        public Truncate Truncate { get; set; }
-        public NormalizeOrLimit NormalizeOrLimit { get; set; }
-        public SaniApproach SanitizerApproach { get; set; }
+        private Truncate Truncate { get; set; }
+        private NormalizeOrLimit NormalizeOrLimit { get; set; }
+        public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+
+        public LongType1 LongType { get; set; }
+        public DecimalType2 DecimalType { get; set; }
+        public IntegerType3 IntegerType { get; set; }
+        public BooleanType4 BooleanType { get; set; }
+        public DateTimeType5 DateTimeType { get; set; }
 
         public MinMax()
         {
         }
-
-        public MinMax(SaniApproach sanitizerApproach)
+        public MinMax(Approach sanitizerApproach): this()
         {
             SanitizerApproach = sanitizerApproach;
         }
 
-        public MinMax(Truncate truncate, NormalizeOrLimit normalizeOrLimit, SaniApproach sanitizerApproach, bool compileRegex, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
+        public MinMax(Truncate truncate, NormalizeOrLimit normalizeOrLimit, Approach sanitizerApproach, bool compileRegex, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
         {
             Truncate = truncate;
             NormalizeOrLimit = normalizeOrLimit;
             CompileRegex = compileRegex;
             SaniExceptions = saniExceptions;
+
+            LongType = new LongType1(CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
+            DecimalType = new DecimalType2(CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
+            IntegerType = new IntegerType3(CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
+            BooleanType = new BooleanType4(CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
+            DateTimeType = new DateTimeType5(this, CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
         }
 
-        /// <summary>
-        /// ReduceToValidMaxMinValues - enforce max and min value of a nullable long (SQL Server BigInt)
-        /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
-        /// </summary>
-        /// <param name="longToClean"></param>
-        /// <returns></returns>         
-        public long? ReduceToValidValue(string longToClean, long longMaxValue, long longMinValue)
+        public class LongType1
         {
-            long? tmpResult = 0;
-
-            try
+            public bool CompileRegex { get; set; }
+            private Truncate Truncate { get; set; }
+            private NormalizeOrLimit NormalizeOrLimit { get; set; }
+            public Approach SanitizerApproach { get; set; }
+            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+            public LongType1(bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
             {
-                if (String.IsNullOrWhiteSpace(longToClean))
-                {
-                    tmpResult = null;
-                }
-                else
-                {
-                    long value;
+                CompileRegex = compileRegex;
+                NormalizeOrLimit = normalizeOrLimit;
+                Truncate = truncate;
+                SanitizerApproach = sanitizerApproach;
+                SaniExceptions = saniExceptions;
+            }
 
-                    if (Math.Min(longMaxValue, longMinValue) == longMaxValue)
-                    {
-                        throw new Exception("Invalid parameters: minimum value cannot be greater than the maximum value.");
-                    }
+            /// <summary>
+            /// ToValidValue - enforce max and min value of a nullable long (SQL Server BigInt)
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="longToClean"></param>
+            /// <returns></returns>         
+            public long? ToValidValue(string longToClean, long longMaxValue, long longMinValue)
+            {
+                long? tmpResult = 0;
 
-                    bool isSuccess = long.TryParse(longToClean, out value);
-                    if (isSuccess)
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(longToClean))
                     {
-                        if (Math.Min(value, longMinValue) == value)
-                        {
-                            tmpResult = longMinValue;//if min value has to be applied then apply it.
-                        }
-                        else //otherwise check whether the max value needs to be applied.
-                        {
-                            if (Math.Max(value, longMaxValue) == value)
-                            {
-                                tmpResult = longMaxValue;
-                            }
-                            else
-                            {
-                                tmpResult = value;
-                            }
-                        }
+                        tmpResult = null;
                     }
                     else
                     {
-                        throw new Exception("Parse Failure.");
+                        long value;
+
+                        if (Math.Min(longMaxValue, longMinValue) == longMaxValue)
+                        {
+                            throw new Exception("Invalid parameters: minimum value cannot be greater than the maximum value.");
+                        }
+
+                        bool isSuccess = long.TryParse(longToClean, out value);
+                        if (isSuccess)
+                        {
+                            if (Math.Min(value, longMinValue) == value)
+                            {
+                                tmpResult = longMinValue;//if min value has to be applied then apply it.
+                            }
+                            else //otherwise check whether the max value needs to be applied.
+                            {
+                                if (Math.Max(value, longMaxValue) == value)
+                                {
+                                    tmpResult = longMaxValue;
+                                }
+                                else
+                                {
+                                    tmpResult = value;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception("Parse Failure.");
+                        }
                     }
                 }
+                catch (Exception ex)
+                {
+                    TrackOrThrowException(longToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                }
+                return tmpResult;
             }
-            catch (Exception ex)
-            {
-                TrackOrThrowException(longToClean, ex);
-            }
-            return tmpResult;
         }
 
         public enum CurrencySeparators
@@ -101,146 +129,163 @@ namespace ModestSanitizer
             xCommaxDotx = 1, // default en-US
             xDotxCommax = 2,
             xSpacexDotx = 3,
-            xSpacexCommax = 4      
+            xSpacexCommax = 4
         }
-        
-        /// <summary>
-        /// ReduceToValidMaxMinValues - enforce max and min value of a nullable decimal
-        /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
-        /// </summary>
-        /// <param name="decimalToClean"></param>
-        /// <returns></returns>         
-        public decimal? ReduceToValidValue(string decimalToClean, decimal decimalMaxValue, decimal decimalMinValue, bool allowNegativeSign, CurrencySeparators currencySeparators = CurrencySeparators.xCommaxDotx)
+
+        public class DecimalType2
         {
-            decimal? tmpResult = 0;
-
-            try
+         
+            public bool CompileRegex { get; set; }
+            private Truncate Truncate { get; set; }
+            private NormalizeOrLimit NormalizeOrLimit { get; set; }
+            public Approach SanitizerApproach { get; set; }
+            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+            public DecimalType2(bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
             {
-                if (String.IsNullOrWhiteSpace(decimalToClean))
+                CompileRegex = compileRegex;
+                NormalizeOrLimit = normalizeOrLimit;
+                Truncate = truncate;
+                SanitizerApproach = sanitizerApproach;
+                SaniExceptions = saniExceptions;
+            }
+
+            /// <summary>
+            /// ToValidValue - enforce max and min value of a nullable decimal
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="decimalToClean"></param>
+            /// <returns></returns>         
+            public decimal? ToValidValue(string decimalToClean, decimal decimalMaxValue, decimal decimalMinValue, bool allowNegativeSign, CurrencySeparators currencySeparators = CurrencySeparators.xCommaxDotx)
+            {
+                decimal? tmpResult = 0;
+
+                try
                 {
-                    tmpResult = null;
-                }
-                else
-                {
-                    decimal value;
-
-                    if (Math.Min(decimalMaxValue, decimalMinValue) == decimalMaxValue)
+                    if (String.IsNullOrWhiteSpace(decimalToClean))
                     {
-                        throw new Exception("Invalid parameters: minimum value cannot be greater than the maximum value.");
-                    }
-
-                    if (!allowNegativeSign)
-                    {
-                        if (decimalToClean.IndexOf("-") > -1)
-                        {
-                            throw new Exception("Negative Sign is NOT allowed.");
-                        }
-                    }
-
-                    StringComparison ic = StringComparison.OrdinalIgnoreCase;
-
-                    //decimalToClean = RemoveAnyExpectedCurrencySymbols(decimalToClean, currencyType, ic);
-
-                    //Remove these rare occurences
-                    decimalToClean = Replace(decimalToClean, "%", String.Empty, ic); //Percent 
-                    decimalToClean = Replace(decimalToClean, "NaN", String.Empty, ic); //NaNSymbol 
-                    decimalToClean = Replace(decimalToClean, "‰", String.Empty, ic); //PerMilleSymbol 
-                    decimalToClean = Replace(decimalToClean, "Infinity", String.Empty, ic); //PositiveInfinitySymbol
-                    decimalToClean = Replace(decimalToClean, "+", String.Empty, ic); //PositiveSign
-                    decimalToClean = Replace(decimalToClean, "-Infinity", String.Empty, ic); //NegativeInfinitySymbol
-
-                    decimalToClean = NormalizeOrLimit.LimitToASCIINumbersOnly(decimalToClean, true, true, allowNegativeSign, true);
-
-                    NumberStyles styles = NumberStyles.Currency;
-                    CultureInfo culture = null;
-
-                    if (currencySeparators == CurrencySeparators.xCommaxDotx)
-                    {
-                        culture = CultureInfo.CreateSpecificCulture("en-US");
-
-                        culture.NumberFormat.CurrencyGroupSeparator = ",";
-                        culture.NumberFormat.NumberGroupSeparator = ",";
-                        culture.NumberFormat.PercentGroupSeparator = ",";
-
-                        culture.NumberFormat.CurrencyDecimalSeparator = ".";
-                        culture.NumberFormat.NumberDecimalSeparator = ".";
-                        culture.NumberFormat.PercentDecimalSeparator = ".";
-                    }
-
-                    if (currencySeparators == CurrencySeparators.xDotxCommax)
-                    {
-                        culture = CultureInfo.CreateSpecificCulture("es-ES");//Spain
-
-                        culture.NumberFormat.CurrencyGroupSeparator = ".";
-                        culture.NumberFormat.NumberGroupSeparator = ".";
-                        culture.NumberFormat.PercentGroupSeparator = ".";
-
-                        culture.NumberFormat.CurrencyDecimalSeparator = ",";
-                        culture.NumberFormat.NumberDecimalSeparator = ",";
-                        culture.NumberFormat.PercentDecimalSeparator = ",";
-                    }
-
-                    if (currencySeparators == CurrencySeparators.xSpacexDotx)
-                    {
-                        culture = CultureInfo.CreateSpecificCulture("sv-SE");//Sweden
-
-                        culture.NumberFormat.CurrencyGroupSeparator = " ";
-                        culture.NumberFormat.NumberGroupSeparator = " ";
-                        culture.NumberFormat.PercentGroupSeparator = " ";
-
-                        culture.NumberFormat.CurrencyDecimalSeparator = ".";
-                        culture.NumberFormat.NumberDecimalSeparator = ".";
-                        culture.NumberFormat.PercentDecimalSeparator = ".";
-                    }
-
-                    if (currencySeparators == CurrencySeparators.xSpacexCommax)
-                    {
-                        culture = CultureInfo.CreateSpecificCulture("fr-FR");//France
-
-                        culture.NumberFormat.CurrencyGroupSeparator = " ";
-                        culture.NumberFormat.NumberGroupSeparator = " ";
-                        culture.NumberFormat.PercentGroupSeparator = " ";
-
-                        culture.NumberFormat.CurrencyDecimalSeparator = ",";
-                        culture.NumberFormat.NumberDecimalSeparator = ",";
-                        culture.NumberFormat.PercentDecimalSeparator = ",";
-                    }
-
-                    culture.NumberFormat.NegativeSign = "-";
-                    styles = (allowNegativeSign) ? (styles | NumberStyles.AllowLeadingSign) : styles;
-
-                    bool isSuccess = decimal.TryParse(decimalToClean, styles, culture, out value);
-                    if (isSuccess)
-                    {
-                        if (Math.Min(value, decimalMinValue) == value)
-                        {
-                            tmpResult = decimalMinValue;//if min value has to be applied then apply it.
-                        }
-                        else //otherwise check whether the max value needs to be applied.
-                        {
-                            if (Math.Max(value, decimalMaxValue) == value)
-                            {
-                                tmpResult = decimalMaxValue;
-                            }
-                            else
-                            {
-                                tmpResult = value;
-                            }
-                        }
+                        tmpResult = null;
                     }
                     else
                     {
-                        throw new Exception("Parse Failure.");
+                        decimal value;
+
+                        if (Math.Min(decimalMaxValue, decimalMinValue) == decimalMaxValue)
+                        {
+                            throw new Exception("Invalid parameters: minimum value cannot be greater than the maximum value.");
+                        }
+
+                        if (!allowNegativeSign)
+                        {
+                            if (decimalToClean.IndexOf("-") > -1)
+                            {
+                                throw new Exception("Negative Sign is NOT allowed.");
+                            }
+                        }
+
+                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
+
+                        //decimalToClean = RemoveAnyExpectedCurrencySymbols(decimalToClean, currencyType, ic);
+
+                        //Remove these rare occurences
+                        decimalToClean = Replace(decimalToClean, "%", String.Empty, ic); //Percent 
+                        decimalToClean = Replace(decimalToClean, "NaN", String.Empty, ic); //NaNSymbol 
+                        decimalToClean = Replace(decimalToClean, "‰", String.Empty, ic); //PerMilleSymbol 
+                        decimalToClean = Replace(decimalToClean, "Infinity", String.Empty, ic); //PositiveInfinitySymbol
+                        decimalToClean = Replace(decimalToClean, "+", String.Empty, ic); //PositiveSign
+                        decimalToClean = Replace(decimalToClean, "-Infinity", String.Empty, ic); //NegativeInfinitySymbol
+
+                        decimalToClean = NormalizeOrLimit.ToASCIINumbersOnly(decimalToClean, true, true, allowNegativeSign, true);
+
+                        NumberStyles styles = NumberStyles.Currency;
+                        CultureInfo culture = null;
+
+                        if (currencySeparators == CurrencySeparators.xCommaxDotx)
+                        {
+                            culture = CultureInfo.CreateSpecificCulture("en-US");
+
+                            culture.NumberFormat.CurrencyGroupSeparator = ",";
+                            culture.NumberFormat.NumberGroupSeparator = ",";
+                            culture.NumberFormat.PercentGroupSeparator = ",";
+
+                            culture.NumberFormat.CurrencyDecimalSeparator = ".";
+                            culture.NumberFormat.NumberDecimalSeparator = ".";
+                            culture.NumberFormat.PercentDecimalSeparator = ".";
+                        }
+
+                        if (currencySeparators == CurrencySeparators.xDotxCommax)
+                        {
+                            culture = CultureInfo.CreateSpecificCulture("es-ES");//Spain
+
+                            culture.NumberFormat.CurrencyGroupSeparator = ".";
+                            culture.NumberFormat.NumberGroupSeparator = ".";
+                            culture.NumberFormat.PercentGroupSeparator = ".";
+
+                            culture.NumberFormat.CurrencyDecimalSeparator = ",";
+                            culture.NumberFormat.NumberDecimalSeparator = ",";
+                            culture.NumberFormat.PercentDecimalSeparator = ",";
+                        }
+
+                        if (currencySeparators == CurrencySeparators.xSpacexDotx)
+                        {
+                            culture = CultureInfo.CreateSpecificCulture("sv-SE");//Sweden
+
+                            culture.NumberFormat.CurrencyGroupSeparator = " ";
+                            culture.NumberFormat.NumberGroupSeparator = " ";
+                            culture.NumberFormat.PercentGroupSeparator = " ";
+
+                            culture.NumberFormat.CurrencyDecimalSeparator = ".";
+                            culture.NumberFormat.NumberDecimalSeparator = ".";
+                            culture.NumberFormat.PercentDecimalSeparator = ".";
+                        }
+
+                        if (currencySeparators == CurrencySeparators.xSpacexCommax)
+                        {
+                            culture = CultureInfo.CreateSpecificCulture("fr-FR");//France
+
+                            culture.NumberFormat.CurrencyGroupSeparator = " ";
+                            culture.NumberFormat.NumberGroupSeparator = " ";
+                            culture.NumberFormat.PercentGroupSeparator = " ";
+
+                            culture.NumberFormat.CurrencyDecimalSeparator = ",";
+                            culture.NumberFormat.NumberDecimalSeparator = ",";
+                            culture.NumberFormat.PercentDecimalSeparator = ",";
+                        }
+
+                        culture.NumberFormat.NegativeSign = "-";
+                        styles = (allowNegativeSign) ? (styles | NumberStyles.AllowLeadingSign) : styles;
+
+                        bool isSuccess = decimal.TryParse(decimalToClean, styles, culture, out value);
+                        if (isSuccess)
+                        {
+                            if (Math.Min(value, decimalMinValue) == value)
+                            {
+                                tmpResult = decimalMinValue;//if min value has to be applied then apply it.
+                            }
+                            else //otherwise check whether the max value needs to be applied.
+                            {
+                                if (Math.Max(value, decimalMaxValue) == value)
+                                {
+                                    tmpResult = decimalMaxValue;
+                                }
+                                else
+                                {
+                                    tmpResult = value;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception("Parse Failure.");
+                        }
                     }
                 }
+                catch (Exception ex)
+                {
+                    TrackOrThrowException(decimalToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                }
+                return tmpResult;
             }
-            catch (Exception ex)
-            {
-                TrackOrThrowException(decimalToClean, ex);
-            }
-            return tmpResult;
         }
-
         //TODO: Create new CurrencyCleanse? To monitor for whitelisted currencies or else log exceptions
         //public enum CurrencyType
         //{
@@ -319,42 +364,485 @@ namespace ModestSanitizer
             return str;
         }
 
-        /// <summary>
-        /// ReduceToValidMaxMinValues - enforce max and min value of a nullable integer
-        /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
-        /// </summary>
-        /// <param name="intToClean"></param>
-        /// <returns></returns>   
-        public int? ReduceToValidValue(string intToClean, int intMaxValue, int intMinValue)
+        public class IntegerType3
         {
-            int? tmpResult = 0;
-
-            try
+            public bool CompileRegex { get; set; }
+            private Truncate Truncate { get; set; }
+            private NormalizeOrLimit NormalizeOrLimit { get; set; }
+            public Approach SanitizerApproach { get; set; }
+            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+            public IntegerType3(bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
             {
-                if (String.IsNullOrWhiteSpace(intToClean))
-                {
-                    tmpResult = null;
-                }
-                else
-                {
-                    int value;
-                    if (Math.Min(intMaxValue, intMinValue) == intMaxValue)
-                    {
-                        throw new Exception("Invalid parameters: minimum value cannot be greater than the maximum value.");
-                    }
+                CompileRegex = compileRegex;
+                NormalizeOrLimit = normalizeOrLimit;
+                Truncate = truncate;
+                SanitizerApproach = sanitizerApproach;
+                SaniExceptions = saniExceptions;
+            }
 
-                    bool isSuccess = int.TryParse(intToClean, out value);
-                    if (isSuccess)
+            /// <summary>
+            /// ToValidValue - enforce max and min value of a nullable integer
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="intToClean"></param>
+            /// <returns></returns>   
+            public int? ToValidValue(string intToClean, int intMaxValue, int intMinValue)
+            {
+                int? tmpResult = 0;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(intToClean))
                     {
-                        if (Math.Min(value, intMinValue) == value)
+                        tmpResult = null;
+                    }
+                    else
+                    {
+                        int value;
+                        if (Math.Min(intMaxValue, intMinValue) == intMaxValue)
                         {
-                                tmpResult = intMinValue;//if min value has to be applied then apply it.
+                            throw new Exception("Invalid parameters: minimum value cannot be greater than the maximum value.");
                         }
-                        else //otherwise check whether the max value needs to be applied.
+
+                        bool isSuccess = int.TryParse(intToClean, out value);
+                        if (isSuccess)
                         {
-                            if (Math.Max(value, intMaxValue) == value)
+                            if (Math.Min(value, intMinValue) == value)
                             {
-                                tmpResult = intMaxValue;
+                                tmpResult = intMinValue;//if min value has to be applied then apply it.
+                            }
+                            else //otherwise check whether the max value needs to be applied.
+                            {
+                                if (Math.Max(value, intMaxValue) == value)
+                                {
+                                    tmpResult = intMaxValue;
+                                }
+                                else
+                                {
+                                    tmpResult = value;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception("Parse Failure.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    TrackOrThrowException(intToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                }
+                return tmpResult;
+            }
+        }
+
+        public class BooleanType4
+        {
+            public bool CompileRegex { get; set; }
+            private Truncate Truncate { get; set; }
+            private NormalizeOrLimit NormalizeOrLimit { get; set; }
+            public Approach SanitizerApproach { get; set; }
+            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+            public BooleanType4(bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
+            {
+                CompileRegex = compileRegex;
+                NormalizeOrLimit = normalizeOrLimit;
+                Truncate = truncate;
+                SanitizerApproach = sanitizerApproach;
+                SaniExceptions = saniExceptions;
+            }
+
+            /// <summary>
+            /// ToValidValue - enforce max and min value of a nullable boolean
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="boolToClean"></param>
+            /// <returns></returns>   
+            public bool? ToValidValue(string boolToClean)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(boolToClean))
+                    {
+                        tmpResult = null;
+                    }
+                    else
+                    {
+                        bool value;
+
+                        string truncatedValue = Truncate.ToValidLength(boolToClean, 5);
+                        bool isSuccess = bool.TryParse(truncatedValue, out value);
+
+                        if (isSuccess)
+                        {
+                            tmpResult = value;
+                        }
+                        else
+                        {
+                            throw new Exception("Parse Failure.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    TrackOrThrowException(boolToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                }
+                return tmpResult;
+            }
+        }
+
+        public enum DateFormat
+        {
+            None = 0,
+            US = 1,
+            Euro = 2,
+            China = 3,
+            SQLServer = 4
+        }
+        public class DateTimeType5
+        {            
+            public bool CompileRegex { get; set; }
+            private Truncate Truncate { get; set; }
+            private NormalizeOrLimit NormalizeOrLimit { get; set; }
+            public Approach SanitizerApproach { get; set; }
+            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+
+            MinMax ThisMinMax { get; set; }
+            public DateTimeType5(MinMax thisMinMax, bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
+            {
+                ThisMinMax = thisMinMax;
+                CompileRegex = compileRegex;
+                NormalizeOrLimit = normalizeOrLimit;
+                Truncate = truncate;
+                SanitizerApproach = sanitizerApproach;
+                SaniExceptions = saniExceptions;
+            }
+
+            /// <summary>
+            /// ToValidValueUSDefault - enforce max and min value of a nullable datetime. Default max 1/1/2999 and min 1/1/1753 with ForwardSlash and US Format and no AM/PM.
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="decimalToClean"></param>
+            /// <returns></returns>         
+            public DateTime? ToValidValueUSDefault(string dateToClean, DateUtil.DataType dateDataType)
+            {
+                return ThisMinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, DateUtil.Delim.ForwardSlash, MinMax.DateFormat.US, false);
+            }
+
+            /// <summary>
+            /// ToValidValueUSDefault - enforce max and min value of a nullable datetime. Default max 1/1/2999 and min 1/1/1753 with US Format and no AM/PM.
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="decimalToClean"></param>
+            /// <returns></returns>         
+            public DateTime? ToValidValueUSDefault(string dateToClean, DateUtil.DataType dateDataType, DateUtil.Delim dateDelimiter)
+            {
+                return ThisMinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, MinMax.DateFormat.US, false);
+            }
+
+            /// <summary>
+            /// ToValidValueUSDefault - enforce max and min value of a nullable datetime. Default max 1/1/2999 and min 1/1/1753 with no AM/PM.
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="decimalToClean"></param>
+            /// <returns></returns>         
+            public DateTime? ToValidValueUSDefault(string dateToClean, DateUtil.DataType dateDataType, DateUtil.Delim dateDelimiter, DateFormat dateFormat)
+            {
+                return ThisMinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, dateFormat, false);
+            }
+
+            /// <summary>
+            /// ToValidValueUSDefault - enforce max and min value of a nullable datetime. Default max 1/1/2999 and min 1/1/1753.
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="decimalToClean"></param>
+            /// <returns></returns>         
+            public DateTime? ToValidValueUSDefault(string dateToClean, DateUtil.DataType dateDataType, DateUtil.Delim dateDelimiter, DateFormat dateFormat, bool expectTrailingAMorPM)
+            {
+                return ThisMinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, dateFormat, expectTrailingAMorPM);
+            }
+            /// <summary>
+            /// ToValidValue - enforce max and min value of a nullable datetime
+            /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
+            /// </summary>
+            /// <param name="dateToClean"></param>
+            /// <returns></returns>         
+            public DateTime? ToValidValue(string dateToClean, DateTime dateMaxValue, DateTime dateMinValue, DateUtil.DataType dateDataType, DateUtil.Delim dateDelimiter, DateFormat dateFormat, bool expectTrailingAMorPM)
+            {
+                String[] strFormat = null;
+                DateTime? tmpResult = null;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(dateToClean))
+                    {
+                        tmpResult = null;
+                    }
+                    else
+                    {
+                        DateTime value;
+
+                        if (DateTime.Compare(dateMinValue.ToUniversalTime(), dateMaxValue.ToUniversalTime()) > 0)
+                        {
+                            throw new Exception("Invalid parameters: minimum date cannot be greater than the maximum date.");
+                        }
+
+                        if (dateDelimiter == DateUtil.Delim.ForwardSlash)
+                        {
+                            if (dateToClean.IndexOf(@"/") == -1)
+                            {
+                                throw new Exception("Invalid date: missing forward slash delimiter.");
+                            }
+                        }
+                        if (dateDelimiter == DateUtil.Delim.Dash)
+                        {
+                            if (dateToClean.IndexOf(@"-") == -1)
+                            {
+                                throw new Exception("Invalid date: missing dash delimiter.");
+                            }
+                        }
+
+                        if (dateDelimiter == DateUtil.Delim.Dot)
+                        {
+                            if (dateToClean.IndexOf(@".") == -1)
+                            {
+                                throw new Exception("Invalid date: missing dot delimiter.");
+                            }
+                        }
+
+                        //This includes Truncate to 33 chars (longest datetime format)
+                        dateToClean = NormalizeOrLimit.ToASCIIDateTimesOnly(dateToClean, dateDelimiter, dateDataType, expectTrailingAMorPM);
+
+                        #region Regex checks and strFormat assignment
+
+                        DateRegex dateRegexObj = new DateRegex(CompileRegex);
+
+                        //Perform specific Regex checks where possible after having already normalized the unicode string and reduced it to ASCII-like characters.
+                        if ((dateDataType == DateUtil.DataType.Date) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
+                        {
+                            strFormat = new string[] { "M/d/yyyy", "MM/dd/yyyy" }; //Example 6/14/2020
+
+                            if (dateDelimiter == DateUtil.Delim.Dot)
+                            {
+                                strFormat = new string[] { "M.d.yyyy", "MM.dd.yyyy" };
+                            }
+                            if (dateDelimiter == DateUtil.Delim.Dash)
+                            {
+                                strFormat = new string[] { "M-d-yyyy", "MM-dd-yyyy" };
+                            }
+
+                            dateRegexObj.PerformRegexForDateInUSFormat(dateToClean);
+                        }
+
+                        if ((dateDataType == DateUtil.DataType.Date) && (dateFormat == DateFormat.Euro)) //Delimiter slash, dash, or dot
+                        {
+                            strFormat = new string[] { "d/M/yyyy", "dd/MM/yyyy" }; //Example 28/02/2005
+
+                            if (dateDelimiter == DateUtil.Delim.Dot)
+                            {
+                                strFormat = new string[] { "d.M.yyyy", "dd.MM.yyyy" };
+                            }
+                            if (dateDelimiter == DateUtil.Delim.Dash)
+                            {
+                                strFormat = new string[] { "d-M-yyyy", "dd-MM-yyyy" };
+                            }
+
+                            dateRegexObj.PerformRegexForDateInEuroFormat(dateToClean);
+                        }
+
+                        if ((dateDataType == DateUtil.DataType.Date) && (dateFormat == DateFormat.China)) //Delimiter slash, dash, or dot
+                        {
+                            strFormat = new string[] { "yyyy/M/d", "yyyy/MM/dd" }; //Example 2009/6/15
+
+                            if (dateDelimiter == DateUtil.Delim.Dot)
+                            {
+                                strFormat = new string[] { "yyyy.M.d", "yyyy.MM.dd" };
+                            }
+                            if (dateDelimiter == DateUtil.Delim.Dash)
+                            {
+                                strFormat = new string[] { "yyyy-M-d", "yyyy-MM-dd" };
+                            }
+
+                            dateRegexObj.PerformRegexForDateInChineseFormat(dateToClean);
+                        }
+
+                        //Not the best regex here but we still have DateTime.ParseExact further below.
+                        if ((dateDataType == DateUtil.DataType.DateTime) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
+                        {
+                            strFormat = null; //Example 02/18/1753 15:15  NOTE: capital H indicates 24-hour time.
+
+                            if (dateDelimiter == DateUtil.Delim.ForwardSlash)
+                            {
+                                strFormat = new string[] { "M/d/yyyy H:m", "MM/dd/yyyy H:m" };
+                            }
+                            if (dateDelimiter == DateUtil.Delim.Dot)
+                            {
+                                strFormat = new string[] { "M.d.yyyy H:m", "MM.dd.yyyy H:m" };
+                            }
+                            if (dateDelimiter == DateUtil.Delim.Dash)
+                            {
+                                strFormat = new string[] { "M-d-yyyy H:m", "MM-dd-yyyy H:m" };
+                            }
+
+                            dateRegexObj.PerformRegexForDateTimeInUSFormat(dateToClean);
+                        }
+
+                        //Not the best regex here but we still have DateTime.ParseExact further below.
+                        if ((dateDataType == DateUtil.DataType.DateTimeWithSeconds) && (dateFormat == DateFormat.US) && !(dateDelimiter == DateUtil.Delim.UTCWithDelimiters || dateDelimiter == DateUtil.Delim.UTCWithoutDelimiters || dateDelimiter == DateUtil.Delim.UTCWithDelimitersAndZone)) //Delimiter slash, dash, or dot
+                        {
+                            strFormat = null; //Example 06/05/2009 15:15:33 or 06/05/2009 03:15:33 PM
+
+                            //Date in US format with single space H:m:ss and with optional AM or PM
+                            if (expectTrailingAMorPM == false)
+                            {
+                                if (dateDelimiter == DateUtil.Delim.ForwardSlash) //NOTE: capital H indicates 24-hour time.
+                                {
+                                    strFormat = new string[] { "M/d/yyyy H:m:s", "MM/dd/yyyy H:m:s" };
+                                }
+                                if (dateDelimiter == DateUtil.Delim.Dot)
+                                {
+                                    strFormat = new string[] { "M.d.yyyy H:m:s", "MM.dd.yyyy H:m:s" };
+                                }
+                                if (dateDelimiter == DateUtil.Delim.Dash)
+                                {
+                                    strFormat = new string[] { "M-d-yyyy H:m:s", "MM-dd-yyyy H:m:s" };
+                                }
+                            }
+                            else //expect AM or PM
+                            {
+                                if (dateDelimiter == DateUtil.Delim.ForwardSlash) //NOTE: capital h indicates regular time not military.
+                                {
+                                    strFormat = new string[] { "M/d/yyyy h:m:s tt", "M/d/yyyy hh:mm:ss tt", "MM/dd/yyyy h:m:s tt", "MM/dd/yyyy hh:mm:ss tt" };
+                                }
+                                if (dateDelimiter == DateUtil.Delim.Dot)
+                                {
+                                    strFormat = new string[] { "M.d.yyyy h:m:s tt", "M.d.yyyy hh:mm:ss tt", "MM.dd.yyyy h:m:s tt", "MM.dd.yyyy hh:mm:ss tt" };
+                                }
+                                if (dateDelimiter == DateUtil.Delim.Dash)
+                                {
+                                    strFormat = new string[] { "M-d-yyyy h:m:s tt", "M-d-yyyy hh:mm:ss tt", "MM-dd-yyyy h:m:s tt", "MM-dd-yyyy hh:mm:ss tt" };
+                                }
+                            }
+
+                            dateRegexObj.PerformRegexForDateTimeWithSecondsInUSFormat(dateToClean, expectTrailingAMorPM);
+                        }
+
+                        //Not the best regex here but we still have DateTime.ParseExact further below.
+                        if ((dateDataType == DateUtil.DataType.DateTimeWithMilliseconds) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
+                        {
+                            strFormat = null; //Example 06/05/2009 15:15:33.001 OR 06/05/2009 03:05:03.003 PM
+
+                            //Date in US format with single space H:m:ss.fff and with optional AM or PM  
+
+                            //NOTE: M = single-digit month is formatted WITHOUT a leading zero. MM = single-digit month is formatted WITH a leading zero.
+                            //      H = single-digit hour is formatted WITHOUT a leading zero.  HH = single-digit hour is formatted WITH a leading zero.
+                            //      d = single-digit day is formatted WITHOUT a leading zero.   dd = single-digit day is formatted WITH a leading zero.
+                            if (expectTrailingAMorPM == false)
+                            {
+                                if (dateDelimiter == DateUtil.Delim.ForwardSlash) //NOTE: capital H indicates 24-hour time. 
+                                {
+                                    strFormat = new string[] { "M/d/yyyy H:m:s.fff", "MM/dd/yyyy H:m:s.fff", "MM/dd/yyyy HH:mm:ss.fff", "M/d/yyyy HH:m:s.fff" };
+                                }
+                                if (dateDelimiter == DateUtil.Delim.Dot)
+                                {
+                                    strFormat = new string[] { "M.d.yyyy H:m:s.fff", "MM.dd.yyyy H:m:s.fff", "MM.dd.yyyy HH:mm:ss.fff", "M.d.yyyy HH:m:s.fff" };
+                                }
+                                if (dateDelimiter == DateUtil.Delim.Dash)
+                                {
+                                    strFormat = new string[] { "M-d-yyyy H:m:s.fff", "MM-dd-yyyy H:m:s.fff", "MM-dd-yyyy HH:mm:ss.fff", "M-d-yyyy HH:m:s.fff" };
+                                }
+                            }
+                            else //expect AM or PM
+                            {
+                                if (dateDelimiter == DateUtil.Delim.ForwardSlash) //NOTE: capital h indicates regular time not military.
+                                {
+                                    strFormat = new string[] { "M/d/yyyy h:m:s.fff tt", "M/d/yyyy hh:mm:ss.fff tt", "MM/dd/yyyy h:m:s.fff tt", "MM/dd/yyyy hh:mm:ss.fff tt" };
+                                }
+                                if (dateDelimiter == DateUtil.Delim.Dot)
+                                {
+                                    strFormat = new string[] { "M.d.yyyy h:m:s.fff tt", "M.d.yyyy hh:mm:ss.fff tt", "MM.dd.yyyy h:m:s.fff tt", "MM.dd.yyyy hh:mm:ss.fff tt" };
+                                }
+                                if (dateDelimiter == DateUtil.Delim.Dash)
+                                {
+                                    strFormat = new string[] { "M-d-yyyy h:m:s.fff tt", "M-d-yyyy hh:mm:ss.fff tt", "MM-dd-yyyy h:m:s.fff tt", "MM-dd-yyyy hh:mm:ss.fff tt" };
+                                }
+                            }
+
+                            dateRegexObj.PerformRegexForDateTimeWithMillisecondsInUSFormat(dateToClean, expectTrailingAMorPM);
+                        }
+
+                        if ((dateDataType == DateUtil.DataType.SQLServerDateTime) && (dateFormat == DateFormat.SQLServer)) //Delimiter slash, dash, or dot
+                        {
+                            strFormat = strFormat = new string[] { "yyyy-MM-dd H:m:s.fff", "yyyy-MM-dd HH:mm:ss.fff" }; //Example 2019-01-25 16:01:36.000
+
+                            //Date in SQL Server format
+                            dateRegexObj.PerformRegexForDateTimeInSQLServerFormat(dateToClean);
+                        }
+
+                        if (dateDelimiter == DateUtil.Delim.UTCWithDelimiters)
+                        {
+                            //Example 2015-12-08T15:15:19
+                            strFormat = new string[] { "yyyy-MM-dd'T'H:m:s", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'H:m:s'Z'", "yyyy-MM-dd'T'HH:mm:ss'Z'" };
+
+                            dateRegexObj.PerformRegexForDateTimeWithSecondsAsUTCWithDelimiters(dateToClean);
+                        }
+
+                        if (dateDelimiter == DateUtil.Delim.UTCWithDelimitersAndZone)
+                        {
+                            //Example 2020-06-10T22:03:15-05:00
+                            strFormat = new string[] { "yyyy-MM-dd'T'H:m:sK", "yyyy-MM-dd'T'HH:mm:ssK", "yyyy-MM-dd'T'H:m:sK'Z'", "yyyy-MM-dd'T'HH:mm:ssK'Z'" };
+                            dateRegexObj.PerformRegexForDateTimeWithSecondsAsUTCWithDelimitersAndZone(dateToClean);
+                        }
+
+                        if (dateDelimiter == DateUtil.Delim.UTCWithoutDelimiters)
+                        {
+                            strFormat = new string[] { "yyyyMMdd'T'HHmmss", "yyyyMMdd'T'Hms", "yyyyMd'T'Hms" }; //Example 20151208T151519
+
+                            //TODO: support yyyyMMdd'T'HHmmss.SSSZ with Milliseconds ?!?
+
+                            dateRegexObj.PerformRegexForDateTimeWithSecondsAsUTCWithoutDelimiters(dateToClean);
+                        }
+                        #endregion
+
+                        CultureInfo culture = null;
+
+                        if (dateFormat == DateFormat.US || dateFormat == DateFormat.SQLServer) //Example 6/15/2009 1:45:30 PM
+                        {
+                            culture = CultureInfo.CreateSpecificCulture("en-US");
+                        }
+
+                        if (dateFormat == DateFormat.Euro) //Example 15/06/2009 13:45:30
+                        {
+                            culture = CultureInfo.CreateSpecificCulture("es-ES");//Spain
+                        }
+
+                        if (dateFormat == DateFormat.China) //Example 2009/6/15 13:45:30
+                        {
+                            culture = CultureInfo.CreateSpecificCulture("zh-CN");//China
+                        }
+
+                        try
+                        {
+                            value = DateTime.ParseExact(dateToClean, strFormat, culture, DateTimeStyles.None);
+                        }
+                        catch (FormatException)
+                        {
+                            throw new Exception("Unable to parse date.");
+                        }
+
+                        //SOURCE: https://blog.submain.com/4-common-datetime-mistakes-c-avoid/
+                        if (DateTime.Compare(value.ToUniversalTime(), dateMinValue.ToUniversalTime()) < 0) //convert to utc prior to comparison
+                        {
+                            tmpResult = dateMinValue; //if minimum needs to be applied then apply it.
+                        }
+                        else //check for maximum
+                        {
+                            if (DateTime.Compare(value.ToUniversalTime(), dateMaxValue.ToUniversalTime()) > 0)
+                            {
+                                tmpResult = dateMaxValue;
                             }
                             else
                             {
@@ -362,362 +850,22 @@ namespace ModestSanitizer
                             }
                         }
                     }
-                    else
-                    {
-                        throw new Exception("Parse Failure.");
-                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                TrackOrThrowException(intToClean, ex);
-            }
-            return tmpResult;
-        }
-
-        /// <summary>
-        /// ReduceToValidMaxMinValues - enforce max and min value of a nullable boolean
-        /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
-        /// </summary>
-        /// <param name="boolToClean"></param>
-        /// <returns></returns>   
-        public bool? ReduceToValidValue(string boolToClean)
-        {
-            bool? tmpResult = false;
-
-            try
-            {
-                if (String.IsNullOrWhiteSpace(boolToClean))
+                catch (Exception ex)
                 {
-                    tmpResult = null;
+                    TrackOrThrowException(dateToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
                 }
-                else
-                {
-                    bool value;
-
-                    string truncatedValue = Truncate.TruncateToValidLength(boolToClean, 5);
-                    bool isSuccess = bool.TryParse(truncatedValue, out value);
-
-                    if (isSuccess)
-                    {
-                        tmpResult = value;
-                    }
-                    else
-                    {
-                        throw new Exception("Parse Failure.");
-                    }
-                }
+                return tmpResult;
             }
-            catch (Exception ex)
-            {
-                TrackOrThrowException(boolToClean, ex);
-            }
-            return tmpResult;
         }
-        
-        public enum DateFormat
-        {
-            US = 1,
-            Euro = 2,
-            China = 3,
-            SQLServer = 4
-        }
-
-        /// <summary>
-        /// ReduceToValidMaxMinValues - enforce max and min value of a nullable decimal
-        /// SOURCE: https://stackoverflow.com/questions/3115678/converting-string-to-int-using-c-sharp
-        /// </summary>
-        /// <param name="decimalToClean"></param>
-        /// <returns></returns>         
-        public DateTime? ReduceToValidValue(string dateToClean, DateTime dateMaxValue, DateTime dateMinValue, Utility.DateDataType dateDataType, Utility.DateDelimiter dateDelimiter, DateFormat dateFormat, bool expectTrailingAMorPM)
-        {
-            String[] strFormat = null;
-            DateTime? tmpResult = null;
-
-            try
-            {
-                if (String.IsNullOrWhiteSpace(dateToClean))
-                {
-                    tmpResult = null;
-                }
-                else
-                {
-                    DateTime value;
-
-                    if (DateTime.Compare(dateMinValue.ToUniversalTime(), dateMaxValue.ToUniversalTime()) > 0)
-                    {
-                        throw new Exception("Invalid parameters: minimum date cannot be greater than the maximum date.");
-                    }
-
-                    if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) 
-                    {
-                        if (dateToClean.IndexOf(@"/") == -1)
-                        {
-                            throw new Exception("Invalid date: missing forward slash delimiter.");
-                        }
-                    }
-                    if (dateDelimiter == Utility.DateDelimiter.Dash)
-                    {
-                        if (dateToClean.IndexOf(@"-") == -1)
-                        {
-                            throw new Exception("Invalid date: missing dash delimiter.");
-                        }
-                    }
-
-                    if (dateDelimiter == Utility.DateDelimiter.Dot)
-                    {
-                        if (dateToClean.IndexOf(@".") == -1)
-                        {
-                            throw new Exception("Invalid date: missing dot delimiter.");
-                        }
-                    }
-
-                    //This includes Truncate to 33 chars (longest datetime format)
-                    dateToClean = NormalizeOrLimit.LimitToASCIIDateTimesOnly(dateToClean, dateDelimiter, dateDataType, expectTrailingAMorPM);
-
-                    #region Regex checks and strFormat assignment
-
-                    DateRegex dateRegexObj = new DateRegex(CompileRegex);
-
-                    //Perform specific Regex checks where possible after having already normalized the unicode string and reduced it to ASCII-like characters.
-                    if ((dateDataType == Utility.DateDataType.Date) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
-                    {
-                        strFormat = new string[] { "M/d/yyyy", "MM/dd/yyyy" }; //Example 6/14/2020
-
-                        if (dateDelimiter == Utility.DateDelimiter.Dot)
-                        {
-                            strFormat = new string[] { "M.d.yyyy", "MM.dd.yyyy" };
-                        }
-                        if (dateDelimiter == Utility.DateDelimiter.Dash)
-                        {
-                            strFormat = new string[] { "M-d-yyyy", "MM-dd-yyyy" };
-                        }
-
-                        dateRegexObj.PerformRegexForDateInUSFormat(dateToClean);
-                    }
-
-                    if ((dateDataType == Utility.DateDataType.Date) && (dateFormat == DateFormat.Euro)) //Delimiter slash, dash, or dot
-                    {
-                        strFormat = new string[] { "d/M/yyyy", "dd/MM/yyyy" }; //Example 28/02/2005
-
-                        if (dateDelimiter == Utility.DateDelimiter.Dot)
-                        {
-                            strFormat = new string[] { "d.M.yyyy", "dd.MM.yyyy" };
-                        }
-                        if (dateDelimiter == Utility.DateDelimiter.Dash)
-                        {
-                            strFormat = new string[] { "d-M-yyyy", "dd-MM-yyyy" };
-                        }
-
-                        dateRegexObj.PerformRegexForDateInEuroFormat(dateToClean);
-                    }
-
-                    if ((dateDataType == Utility.DateDataType.Date) && (dateFormat == DateFormat.China)) //Delimiter slash, dash, or dot
-                    {
-                        strFormat = new string[] { "yyyy/M/d", "yyyy/MM/dd" }; //Example 2009/6/15
-
-                        if (dateDelimiter == Utility.DateDelimiter.Dot)
-                        {
-                            strFormat = new string[] { "yyyy.M.d", "yyyy.MM.dd" };
-                        }
-                        if (dateDelimiter == Utility.DateDelimiter.Dash)
-                        {
-                            strFormat = new string[] { "yyyy-M-d", "yyyy-MM-dd" };
-                        }
-
-                        dateRegexObj.PerformRegexForDateInChineseFormat(dateToClean);
-                    }
-
-                    //Not the best regex here but we still have DateTime.ParseExact further below.
-                    if ((dateDataType == Utility.DateDataType.DateTime) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
-                    {
-                        strFormat = null; //Example 02/18/1753 15:15  NOTE: capital H indicates 24-hour time.
-
-                        if (dateDelimiter == Utility.DateDelimiter.ForwardSlash)
-                        {
-                            strFormat = new string[] { "M/d/yyyy H:m", "MM/dd/yyyy H:m" };
-                        }
-                        if (dateDelimiter == Utility.DateDelimiter.Dot)
-                        {
-                            strFormat = new string[] { "M.d.yyyy H:m", "MM.dd.yyyy H:m" };
-                        }
-                        if (dateDelimiter == Utility.DateDelimiter.Dash)
-                        {
-                            strFormat = new string[] { "M-d-yyyy H:m", "MM-dd-yyyy H:m" };
-                        }
-
-                        dateRegexObj.PerformRegexForDateTimeInUSFormat(dateToClean);
-                    }
-
-                    //Not the best regex here but we still have DateTime.ParseExact further below.
-                    if ((dateDataType == Utility.DateDataType.DateTimeWithSeconds) && (dateFormat == DateFormat.US) && !(dateDelimiter == Utility.DateDelimiter.UTCWithDelimiters || dateDelimiter == Utility.DateDelimiter.UTCWithoutDelimiters)) //Delimiter slash, dash, or dot
-                    {
-                        strFormat = null; //Example 06/05/2009 15:15:33 or 06/05/2009 03:15:33 PM
-
-                        //Date in US format with single space H:m:ss and with optional AM or PM
-                        if (expectTrailingAMorPM == false)
-                        {
-                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) //NOTE: capital H indicates 24-hour time.
-                            {
-                                strFormat = new string[] { "M/d/yyyy H:m:s", "MM/dd/yyyy H:m:s" };
-                            }
-                            if (dateDelimiter == Utility.DateDelimiter.Dot)
-                            {
-                                strFormat = new string[] { "M.d.yyyy H:m:s", "MM.dd.yyyy H:m:s" };
-                            }
-                            if (dateDelimiter == Utility.DateDelimiter.Dash)
-                            {
-                                strFormat = new string[] { "M-d-yyyy H:m:s", "MM-dd-yyyy H:m:s" };
-                            }
-                        }
-                        else //expect AM or PM
-                        {
-                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) //NOTE: capital h indicates regular time not military.
-                            {
-                                strFormat = new string[] { "M/d/yyyy h:m:s tt", "M/d/yyyy hh:mm:ss tt", "MM/dd/yyyy h:m:s tt", "MM/dd/yyyy hh:mm:ss tt" };
-                            }
-                            if (dateDelimiter == Utility.DateDelimiter.Dot)
-                            {
-                                strFormat = new string[] { "M.d.yyyy h:m:s tt", "M.d.yyyy hh:mm:ss tt", "MM.dd.yyyy h:m:s tt", "MM.dd.yyyy hh:mm:ss tt" };
-                            }
-                            if (dateDelimiter == Utility.DateDelimiter.Dash)
-                            {
-                                strFormat = new string[] { "M-d-yyyy h:m:s tt", "M-d-yyyy hh:mm:ss tt", "MM-dd-yyyy h:m:s tt", "MM-dd-yyyy hh:mm:ss tt" };
-                            }
-                        }
-
-                        dateRegexObj.PerformRegexForDateTimeWithSecondsInUSFormat(dateToClean, expectTrailingAMorPM);
-                    }
-
-                    //Not the best regex here but we still have DateTime.ParseExact further below.
-                    if ((dateDataType == Utility.DateDataType.DateTimeWithMilliseconds) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
-                    {
-                        strFormat = null; //Example 06/05/2009 15:15:33.001 OR 06/05/2009 03:05:03.003 PM
-
-                        //Date in US format with single space H:m:ss.fff and with optional AM or PM  
-   
-                        //NOTE: M = single-digit month is formatted WITHOUT a leading zero. MM = single-digit month is formatted WITH a leading zero.
-                        //      H = single-digit hour is formatted WITHOUT a leading zero.  HH = single-digit hour is formatted WITH a leading zero.
-                        //      d = single-digit day is formatted WITHOUT a leading zero.   dd = single-digit day is formatted WITH a leading zero.
-                        if (expectTrailingAMorPM == false)
-                        {
-                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) //NOTE: capital H indicates 24-hour time. 
-                            {
-                                strFormat = new string[] { "M/d/yyyy H:m:s.fff", "MM/dd/yyyy H:m:s.fff", "MM/dd/yyyy HH:mm:ss.fff", "M/d/yyyy HH:m:s.fff" };
-                            }
-                            if (dateDelimiter == Utility.DateDelimiter.Dot)
-                            {
-                                strFormat = new string[] { "M.d.yyyy H:m:s.fff", "MM.dd.yyyy H:m:s.fff", "MM.dd.yyyy HH:mm:ss.fff", "M.d.yyyy HH:m:s.fff" };
-                            }
-                            if (dateDelimiter == Utility.DateDelimiter.Dash)
-                            {
-                                strFormat = new string[] { "M-d-yyyy H:m:s.fff", "MM-dd-yyyy H:m:s.fff", "MM-dd-yyyy HH:mm:ss.fff", "M-d-yyyy HH:m:s.fff" };
-                            }
-                        }
-                        else //expect AM or PM
-                        {
-                            if (dateDelimiter == Utility.DateDelimiter.ForwardSlash) //NOTE: capital h indicates regular time not military.
-                            {
-                                strFormat = new string[] { "M/d/yyyy h:m:s.fff tt", "M/d/yyyy hh:mm:ss.fff tt", "MM/dd/yyyy h:m:s.fff tt", "MM/dd/yyyy hh:mm:ss.fff tt" };
-                            }
-                            if (dateDelimiter == Utility.DateDelimiter.Dot)
-                            {
-                                strFormat = new string[] { "M.d.yyyy h:m:s.fff tt", "M.d.yyyy hh:mm:ss.fff tt", "MM.dd.yyyy h:m:s.fff tt", "MM.dd.yyyy hh:mm:ss.fff tt" };
-                            }
-                            if (dateDelimiter == Utility.DateDelimiter.Dash)
-                            {
-                                strFormat = new string[] { "M-d-yyyy h:m:s.fff tt", "M-d-yyyy hh:mm:ss.fff tt", "MM-dd-yyyy h:m:s.fff tt", "MM-dd-yyyy hh:mm:ss.fff tt" };
-                            }
-                        }
-
-                        dateRegexObj.PerformRegexForDateTimeWithMillisecondsInUSFormat(dateToClean, expectTrailingAMorPM);
-                    }
-
-                    if ((dateDataType == Utility.DateDataType.SQLServerDateTime) && (dateFormat == DateFormat.SQLServer)) //Delimiter slash, dash, or dot
-                    {
-                        strFormat = strFormat = new string[] { "yyyy-MM-dd H:m:s.fff", "yyyy-MM-dd HH:mm:ss.fff" }; //Example 2019-01-25 16:01:36.000
-
-                        //Date in SQL Server format
-                        dateRegexObj.PerformRegexForDateTimeInSQLServerFormat(dateToClean);
-                    }
-
-                    if (dateDelimiter == Utility.DateDelimiter.UTCWithDelimiters)
-                    {
-                        //Example 2015-12-08T15:15:19
-                        strFormat = new string[] { "yyyy-MM-dd'T'H:m:s", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'H:m:s'Z'", "yyyy-MM-dd'T'HH:mm:ss'Z'" };
-
-                        dateRegexObj.PerformRegexForDateTimeWithSecondsAsUTCWithDelimiters(dateToClean);
-                    }
-
-                    if (dateDelimiter == Utility.DateDelimiter.UTCWithoutDelimiters)
-                    {
-                        strFormat = new string[] { "yyyyMMdd'T'HHmmss", "yyyyMMdd'T'Hms", "yyyyMd'T'Hms" }; //Example 20151208T151519
-
-                        //TODO: support yyyyMMdd'T'HHmmss.SSSZ with Milliseconds ?!?
-
-                        dateRegexObj.PerformRegexForDateTimeWithSecondsAsUTCWithoutDelimiters(dateToClean);
-                    }
-                    #endregion
-
-                    CultureInfo culture = null;
-
-                    if (dateFormat == DateFormat.US || dateFormat == DateFormat.SQLServer) //Example 6/15/2009 1:45:30 PM
-                    {
-                        culture = CultureInfo.CreateSpecificCulture("en-US");
-                    }
-
-                    if (dateFormat == DateFormat.Euro) //Example 15/06/2009 13:45:30
-                    {
-                        culture = CultureInfo.CreateSpecificCulture("es-ES");//Spain
-                    }
-
-                    if (dateFormat == DateFormat.China) //Example 2009/6/15 13:45:30
-                    {
-                        culture = CultureInfo.CreateSpecificCulture("zh-CN");//China
-                    }
-
-                    try
-                    {
-                        value = DateTime.ParseExact(dateToClean, strFormat, culture, DateTimeStyles.None);
-                    }
-                    catch (FormatException)
-                    {
-                       throw new Exception("Unable to parse date.");
-                    }
-
-                    //SOURCE: https://blog.submain.com/4-common-datetime-mistakes-c-avoid/
-                    if (DateTime.Compare(value.ToUniversalTime(), dateMinValue.ToUniversalTime()) < 0) //convert to utc prior to comparison
-                    {
-                            tmpResult = dateMinValue; //if minimum needs to be applied then apply it.
-                    }
-                    else //check for maximum
-                    {
-                        if (DateTime.Compare(value.ToUniversalTime(), dateMaxValue.ToUniversalTime()) > 0)
-                        {
-                            tmpResult = dateMaxValue;
-                        }
-                        else
-                        {
-                            tmpResult = value;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                TrackOrThrowException(dateToClean, ex);
-            }
-            return tmpResult;
-        }
-        
-        private void TrackOrThrowException(string valToClean, Exception ex)
+        private static void TrackOrThrowException(string valToClean, Exception ex, bool compileRegex, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
         {
             //TODO: apply blacklist to remove potentially malicious characters such as carriage return line feed. Don't want these in the log!
-            string exceptionValue = Truncate.TruncateToValidLength(valToClean, 33);
+            string exceptionValue = truncate.ToValidLength(valToClean, 33);
 
-            if (SanitizerApproach == SaniApproach.TrackExceptionsInList)
+            if (sanitizerApproach == Approach.TrackExceptionsInList)
             {
-                SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.MinMax, exceptionValue));
+                saniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.MinMax, exceptionValue));
             }
             else
             {

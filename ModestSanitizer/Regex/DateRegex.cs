@@ -141,7 +141,7 @@ namespace ModestSanitizer
             //Date in UTC format where string must contain only date-time and no other chars. 
             //SOURCE: https://stackoverflow.com/questions/25568134/regex-to-verify-utc-date-time-format
             string dateRegex = @"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z?$";
-
+        
             bool matchOnWindows = false;
 
             if (CompileRegex)
@@ -157,6 +157,30 @@ namespace ModestSanitizer
             if (!matchOnWindows)
             {
                 throw new Exception("Invalid date: format fails to match UTC with delimiters.");
+            }
+        }
+
+        public void PerformRegexForDateTimeWithSecondsAsUTCWithDelimitersAndZone(string dateToClean)
+        {
+            //Date in UTC format where string must contain only date-time and no other chars. 
+            //SOURCE: https://stackoverflow.com/questions/25568134/regex-to-verify-utc-date-time-format
+            string dateRegex = @"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\-|\+)([0-9]{2}:[0-9]{2})Z?$";
+
+            bool matchOnWindows = false;
+
+            if (CompileRegex)
+            {
+                //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
+                matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+            }
+            else
+            {
+                matchOnWindows = Regex.IsMatch(dateToClean, dateRegex, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            }
+
+            if (!matchOnWindows)
+            {
+                throw new Exception("Invalid date: format fails to match UTC with delimiters and zone.");
             }
         }
 

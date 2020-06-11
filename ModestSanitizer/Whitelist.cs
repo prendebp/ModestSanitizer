@@ -15,21 +15,21 @@ namespace ModestSanitizer
     /// </summary>
     public class Whitelist
     {
-        public Truncate Truncate { get; set; }
-        public NormalizeOrLimit NormalizeOrLimit { get; set; }
-        public SaniApproach SanitizerApproach { get; set; }
+        private Truncate Truncate { get; set; }
+        private NormalizeOrLimit NormalizeOrLimit { get; set; }
+        public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
         public Whitelist()
         {
         }
 
-        public Whitelist(SaniApproach sanitizerApproach)
+        public Whitelist(Approach sanitizerApproach)
         {
             SanitizerApproach = sanitizerApproach;
         }
 
-        public Whitelist(Truncate truncate, NormalizeOrLimit normalizeOrLimit, SaniApproach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
+        public Whitelist(Truncate truncate, NormalizeOrLimit normalizeOrLimit, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
         {
             Truncate = truncate;
             NormalizeOrLimit = normalizeOrLimit;
@@ -37,11 +37,11 @@ namespace ModestSanitizer
         }
 
         /// <summary>
-        /// Equals - compare string to check against whitelist value
+        /// Equals - compare string to check against whitelist value. Sets stringToCheck to whitelist value if equivalent.
         /// </summary>
         /// <param name="stringToCheck"></param>
         /// <returns></returns>   
-        public bool? EqualsUsingASCII(string stringToCheck, string whitelistValue, int lengthToTruncateTo)
+        public bool? EqualsUsingASCII(ref string stringToCheck, string whitelistValue, int lengthToTruncateTo)
         {
             bool? tmpResult = false;
 
@@ -58,12 +58,13 @@ namespace ModestSanitizer
                 }
                 else
                 {
-                    string limitedToASCII = NormalizeOrLimit.LimitToASCIIOnly(stringToCheck);
-                    string truncatedValue = Truncate.TruncateToValidLength(limitedToASCII, lengthToTruncateTo);
+                    string limitedToASCII = NormalizeOrLimit.ToASCIIOnly(stringToCheck);
+                    string truncatedValue = Truncate.ToValidLength(limitedToASCII, lengthToTruncateTo);
                     bool isSuccess = (truncatedValue.Equals(whitelistValue));
 
                     if (isSuccess)
                     {
+                        stringToCheck = whitelistValue;
                         tmpResult = true;
                     }
                     else
@@ -81,11 +82,11 @@ namespace ModestSanitizer
 
 
         /// <summary>
-        /// Equals - compare string to check against whitelist value while ignoring case
+        /// Equals - compare string to check against whitelist value while ignoring case sensitivity. Sets stringToCheck to whitelist value (including case) if equivalent.
         /// </summary>
         /// <param name="stringToCheck"></param>
         /// <returns></returns>   
-        public bool? EqualsIgnoreCaseUsingASCII(string stringToCheck, string whitelistValue, int lengthToTruncateTo)
+        public bool? EqualsIgnoreCaseUsingASCII(ref string stringToCheck, string whitelistValue, int lengthToTruncateTo)
         {
             bool? tmpResult = false;
 
@@ -101,19 +102,20 @@ namespace ModestSanitizer
                     tmpResult = null;
                 }
                 else
-                {
-                    string limitedToASCII = NormalizeOrLimit.LimitToASCIIOnly(stringToCheck);
-                    string truncatedValue = Truncate.TruncateToValidLength(limitedToASCII, lengthToTruncateTo);
+                {                    
+                    string truncatedValue = Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                    string limitedToASCII = NormalizeOrLimit.ToASCIIOnly(truncatedValue);
                     StringComparison ic = StringComparison.OrdinalIgnoreCase;
 
-                    int initialLength = truncatedValue.Length;
-                    string stringPostReplacement = Replace(truncatedValue, whitelistValue, string.Empty, ic);
+                    int initialLength = limitedToASCII.Length;
+                    string stringPostReplacement = Replace(limitedToASCII, whitelistValue, string.Empty, ic);
                     int finalLength = stringPostReplacement.Length;
 
                     bool isSuccess = (finalLength == 0);
 
                     if (isSuccess)
                     {
+                        stringToCheck = whitelistValue;
                         tmpResult = true;
                     }
                     else
@@ -148,9 +150,9 @@ namespace ModestSanitizer
 
         private void TrackOrThrowException(string msg, string valToClean, Exception ex)
         {
-            string exceptionValue = Truncate.TruncateToValidLength(valToClean, 5);
+            string exceptionValue = Truncate.ToValidLength(valToClean, 5);
 
-            if (SanitizerApproach == SaniApproach.TrackExceptionsInList)
+            if (SanitizerApproach == Approach.TrackExceptionsInList)
             {
                 SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.Whitelist, exceptionValue));
             }

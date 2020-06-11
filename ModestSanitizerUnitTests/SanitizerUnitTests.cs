@@ -13,108 +13,114 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_ReduceToValidMaxMinValue()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
+            Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
 
-            DateTime? resultSQLServerDateTime = sanitizer.MinMax.ReduceToValidValue("1700-01-25 16:01:36.000", new DateTime(2020,1,1), new DateTime(1753,1,1), Utility.DateDataType.SQLServerDateTime, Utility.DateDelimiter.Dash, MinMax.DateFormat.SQLServer, false);
+            string utcStringWithTimeZone = DateUtil.GetNowFormattedAsUTCStringWithTimeZone();
+           
+            DateTime? resultUTCWithTimeZone = sanitizer.MinMax.DateTimeType.ToValidValue(utcStringWithTimeZone, new DateTime(2050, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.DateTimeWithSeconds, DateUtil.Delim.UTCWithDelimitersAndZone, MinMax.DateFormat.None, false);
+
+            Assert.AreEqual(utcStringWithTimeZone, resultUTCWithTimeZone.Value.ToString("yyyy-MM-dd'T'HH:mm:ssK"));
+
+            DateTime? resultSQLServerDateTime = sanitizer.MinMax.DateTimeType.ToValidValueUSDefault("1700-01-25 16:01:36.000", DateUtil.DataType.SQLServerDateTime, DateUtil.Delim.Dash, MinMax.DateFormat.SQLServer);
 
             Assert.AreEqual(new DateTime(1753, 1, 1, 0, 0, 0), resultSQLServerDateTime);
 
-            DateTime? resultDateInUSFormat = sanitizer.MinMax.ReduceToValidValue("1/25/1970", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.Date, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
+            DateTime? resultDateInUSFormat = sanitizer.MinMax.DateTimeType.ToValidValueUSDefault("1/25/1970", DateUtil.DataType.Date);
 
             Assert.AreEqual(new DateTime(1970, 1, 25, 0, 0, 0), resultDateInUSFormat);
 
-            DateTime? resultDateInEuroFormat = sanitizer.MinMax.ReduceToValidValue("26-01-1970", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.Date, Utility.DateDelimiter.Dash, MinMax.DateFormat.Euro, false);
+            DateTime? resultDateInEuroFormat = sanitizer.MinMax.DateTimeType.ToValidValue("26-01-1970", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.Date, DateUtil.Delim.Dash, MinMax.DateFormat.Euro, false);
 
             Assert.AreEqual(new DateTime(1970, 1, 26, 0, 0, 0), resultDateInEuroFormat);
 
-            DateTime? resultDateInChineseFormat = sanitizer.MinMax.ReduceToValidValue("2009.06.15", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.Date, Utility.DateDelimiter.Dot, MinMax.DateFormat.China, false);
+            DateTime? resultDateInChineseFormat = sanitizer.MinMax.DateTimeType.ToValidValue("2009.06.15", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.Date, DateUtil.Delim.Dot, MinMax.DateFormat.China, false);
 
             Assert.AreEqual(new DateTime(2009, 6, 15, 0, 0, 0), resultDateInChineseFormat);
             
-            DateTime? resultDateInUSFormatWithTime = sanitizer.MinMax.ReduceToValidValue("02/18/1953 15:15", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTime, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
+            DateTime? resultDateInUSFormatWithTime = sanitizer.MinMax.DateTimeType.ToValidValue("02/18/1953 15:15", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.DateTime, DateUtil.Delim.ForwardSlash, MinMax.DateFormat.US, false);
 
             Assert.AreEqual(new DateTime(1953, 2, 18, 15, 15, 0), resultDateInUSFormatWithTime);
 
-            DateTime? resultDateInUSFormatWithTimeSeconds = sanitizer.MinMax.ReduceToValidValue("06/08/1953 15:15:33", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
+            DateTime? resultDateInUSFormatWithTimeSeconds = sanitizer.MinMax.DateTimeType.ToValidValue("06/08/1953 15:15:33", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.DateTimeWithSeconds, DateUtil.Delim.ForwardSlash, MinMax.DateFormat.US, false);
 
             Assert.AreEqual(new DateTime(1953, 6, 8, 15, 15, 33), resultDateInUSFormatWithTimeSeconds);
 
-            DateTime? resultDateInUSFormatWithTimeSecondsAMPM = sanitizer.MinMax.ReduceToValidValue("06/15/2009 03:05:03 PM", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, true);
+            DateTime? resultDateInUSFormatWithTimeSecondsAMPM = sanitizer.MinMax.DateTimeType.ToValidValue("06/15/2009 03:05:03 PM", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.DateTimeWithSeconds, DateUtil.Delim.ForwardSlash, MinMax.DateFormat.US, true);
 
             Assert.AreEqual(new DateTime(2009, 6, 15, 15, 5, 3, 0), resultDateInUSFormatWithTimeSecondsAMPM);
 
-            DateTime? resultDateInUSFormatWithTimeMilliseconds = sanitizer.MinMax.ReduceToValidValue("06/05/2009 03:05:03.003", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithMilliseconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, false);
+            DateTime? resultDateInUSFormatWithTimeMilliseconds = sanitizer.MinMax.DateTimeType.ToValidValue("06/05/2009 03:05:03.003", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.DateTimeWithMilliseconds, DateUtil.Delim.ForwardSlash, MinMax.DateFormat.US, false);
 
             Assert.AreEqual(new DateTime(2009, 6, 5, 3, 5, 3, 3), resultDateInUSFormatWithTimeMilliseconds); //since no AM or PM specified, the above is 3:05 AM.
 
-            DateTime? resultDateInUSFormatWithTimeMillisecondsAMPM = sanitizer.MinMax.ReduceToValidValue("06/05/2009 03:05:03.003 PM", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithMilliseconds, Utility.DateDelimiter.ForwardSlash, MinMax.DateFormat.US, true);
+            DateTime? resultDateInUSFormatWithTimeMillisecondsAMPM = sanitizer.MinMax.DateTimeType.ToValidValue("06/05/2009 03:05:03.003 PM", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.DateTimeWithMilliseconds, DateUtil.Delim.ForwardSlash, MinMax.DateFormat.US, true);
 
             Assert.AreEqual(new DateTime(2009, 6, 5, 15, 5, 3, 3), resultDateInUSFormatWithTimeMillisecondsAMPM); //this is 3:05 PM or 15:05 in 24-hr time
 
-            DateTime? resultDateTimeWithUTCWithDelimiters = sanitizer.MinMax.ReduceToValidValue("2015-12-08T15:15:19", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.UTCWithDelimiters, MinMax.DateFormat.US, false);
+            DateTime? resultDateTimeWithUTCWithDelimiters = sanitizer.MinMax.DateTimeType.ToValidValue("2015-12-08T15:15:19", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.DateTimeWithSeconds, DateUtil.Delim.UTCWithDelimiters, MinMax.DateFormat.US, false);
 
             Assert.AreEqual(new DateTime(2015, 12, 8, 15, 15, 19), resultDateTimeWithUTCWithDelimiters);
 
-            DateTime? resultDateTimeWithUTCWithoutDelimiters = sanitizer.MinMax.ReduceToValidValue("20151208T151519", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), Utility.DateDataType.DateTimeWithSeconds, Utility.DateDelimiter.UTCWithoutDelimiters, MinMax.DateFormat.US, false);
-
+            DateTime? resultDateTimeWithUTCWithoutDelimiters = sanitizer.MinMax.DateTimeType.ToValidValue("20151208T151519", new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), DateUtil.DataType.DateTimeWithSeconds, DateUtil.Delim.UTCWithoutDelimiters, MinMax.DateFormat.US, false);
+           
             Assert.AreEqual(new DateTime(2015, 12, 8, 15, 15, 19), resultDateTimeWithUTCWithoutDelimiters);
 
-            decimal? resultDollarSign = sanitizer.MinMax.ReduceToValidValue("-$100,000.00", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xCommaxDotx);
+            decimal? resultDollarSign = sanitizer.MinMax.DecimalType.ToValidValue("-$100,000.00", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xCommaxDotx);
 
             Assert.AreEqual(-100000.00M, resultDollarSign);
 
-            decimal? resultNegativeSign = sanitizer.MinMax.ReduceToValidValue("-1 220.5365$", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xSpacexDotx);
+            decimal? resultNegativeSign = sanitizer.MinMax.DecimalType.ToValidValue("-1 220.5365$", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xSpacexDotx);
 
             Assert.AreEqual(-1220.5365M, resultNegativeSign);
 
-            decimal? resultDotComma = sanitizer.MinMax.ReduceToValidValue("€120.000,99", 999999999999.99M, 0.00M, false, MinMax.CurrencySeparators.xDotxCommax);
+            decimal? resultDotComma = sanitizer.MinMax.DecimalType.ToValidValue("€120.000,99", 999999999999.99M, 0.00M, false, MinMax.CurrencySeparators.xDotxCommax);
 
             Assert.AreEqual(120000.99M, resultDotComma);
 
-            decimal? resultSpaceComma = sanitizer.MinMax.ReduceToValidValue("€120 000,995", 999999999999.99M, 0.00M, false, MinMax.CurrencySeparators.xSpacexCommax);
+            decimal? resultSpaceComma = sanitizer.MinMax.DecimalType.ToValidValue("€120 000,995", 999999999999.99M, 0.00M, false, MinMax.CurrencySeparators.xSpacexCommax);
 
             Assert.AreEqual(120000.995M, resultSpaceComma);
 
-            decimal? resultSpace = sanitizer.MinMax.ReduceToValidValue("-20 000 $", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xSpacexDotx);
+            decimal? resultSpace = sanitizer.MinMax.DecimalType.ToValidValue("-20 000 $", 999999999999.99M, -100000.00M, true, MinMax.CurrencySeparators.xSpacexDotx);
 
             Assert.AreEqual(-20000M, resultSpace);
 
-            decimal? resultSpace2 = sanitizer.MinMax.ReduceToValidValue("($20,000)", 999999999999.99M, -19000.00M, true);
+            decimal? resultSpace2 = sanitizer.MinMax.DecimalType.ToValidValue("($20,000)", 999999999999.99M, -19000.00M, true);
 
             Assert.AreEqual(-19000M, resultSpace2);
 
-            decimal? resultInvalidLeadZeroes = sanitizer.MinMax.ReduceToValidValue("$00,012.7", 999999999999.99M, 0.00M, true);
+            decimal? resultInvalidLeadZeroes = sanitizer.MinMax.DecimalType.ToValidValue("$00,012.7", 999999999999.99M, 0.00M, true);
 
             Assert.AreEqual(12.7M, resultInvalidLeadZeroes);
   
-            int ? result = sanitizer.MinMax.ReduceToValidValue("5", 4, 0);
+            int ? result = sanitizer.MinMax.IntegerType.ToValidValue("5", 4, 0);
 
             Assert.AreEqual(4, result);
 
-            int? result2 = sanitizer.MinMax.ReduceToValidValue("4", 4, 0);
+            int? result2 = sanitizer.MinMax.IntegerType.ToValidValue("4", 4, 0);
 
             Assert.AreEqual(4, result2);
 
-            int? result3 = sanitizer.MinMax.ReduceToValidValue("3", 4, 0);
+            int? result3 = sanitizer.MinMax.IntegerType.ToValidValue("3", 4, 0);
 
             Assert.AreEqual(3, result3);
 
-            int? resultNull = sanitizer.MinMax.ReduceToValidValue(null, 50, 0);
+            int? resultNull = sanitizer.MinMax.IntegerType.ToValidValue(null, 50, 0);
 
             Assert.AreEqual(null, resultNull);
 
-            int? result4 = sanitizer.MinMax.ReduceToValidValue("-51", 50, -50);
+            int? result4 = sanitizer.MinMax.IntegerType.ToValidValue("-51", 50, -50);
 
             Assert.AreEqual(-50, result4);
 
-            int? result5 = sanitizer.MinMax.ReduceToValidValue("-49", 50, -50);
+            int? result5 = sanitizer.MinMax.IntegerType.ToValidValue("-49", 50, -50);
 
             Assert.AreEqual(-49, result5);
 
             bool wasExceptionThrown = false;
             try
             {
-                sanitizer.MinMax.ReduceToValidValue("999999999999999999999999999999999", 50, -50);
+                sanitizer.MinMax.IntegerType.ToValidValue("999999999999999999999999999999999", 50, -50);
             }
             catch (SanitizerException)
             {
@@ -125,11 +131,11 @@ namespace ModestSanitizerUnitTests
 
             wasExceptionThrown = false; //re-set flag
 
-            Sanitizer sanitizer2 = new Sanitizer(SaniApproach.TrackExceptionsInList, true);
+            Sanitizer sanitizer2 = new Sanitizer(Approach.TrackExceptionsInList, true);
 
             try
             {
-                sanitizer2.MinMax.ReduceToValidValue("999999999999999999999999999999999", 50, -50);
+                sanitizer2.MinMax.IntegerType.ToValidValue("999999999999999999999999999999999", 50, -50);
             }
             catch (SanitizerException)
             {
@@ -145,15 +151,15 @@ namespace ModestSanitizerUnitTests
             Assert.AreEqual(kvp.Value, "999999999999999999999999999999999");
 
 
-            bool? result6 = sanitizer.MinMax.ReduceToValidValue("false");
+            bool? result6 = sanitizer.MinMax.BooleanType.ToValidValue("false");
 
             Assert.AreEqual(false, result6);
 
-            bool? result7 = sanitizer.MinMax.ReduceToValidValue(" ");
+            bool? result7 = sanitizer.MinMax.BooleanType.ToValidValue(" ");
 
             Assert.AreEqual(null, result7);
 
-            bool? result8 = sanitizer.MinMax.ReduceToValidValue("True");
+            bool? result8 = sanitizer.MinMax.BooleanType.ToValidValue("True");
 
             Assert.AreEqual(true, result8);
 
@@ -161,7 +167,7 @@ namespace ModestSanitizerUnitTests
 
             try
             {
-                bool? result9 = sanitizer.MinMax.ReduceToValidValue("1");
+                bool? result9 = sanitizer.MinMax.BooleanType.ToValidValue("1");
             }
             catch (SanitizerException)
             {
@@ -174,7 +180,7 @@ namespace ModestSanitizerUnitTests
 
             try
             {
-                bool? result10 = sanitizer.MinMax.ReduceToValidValue("a bad value");
+                bool? result10 = sanitizer.MinMax.BooleanType.ToValidValue("a bad value");
             }
             catch (SanitizerException)
             {
@@ -189,21 +195,24 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_WhitelistEquals()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
+            Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
             bool wasExceptionThrown = false;
             string innerExceptionMsg = String.Empty;
 
-            bool? result = sanitizer.Whitelist.EqualsUsingASCII("farside", "farside", 7);
+            string stringToCheck = "farside";
+            bool? result = sanitizer.Whitelist.EqualsUsingASCII(ref stringToCheck, "farside", 7);
 
             Assert.AreEqual(true, result);
+            Assert.AreEqual("farside", stringToCheck);
 
-            bool? result2 = sanitizer.Whitelist.EqualsIgnoreCaseUsingASCII("farside", "farSiDe", 7);
+            bool? result2 = sanitizer.Whitelist.EqualsIgnoreCaseUsingASCII(ref stringToCheck, "farSiDe", 7);
 
             Assert.AreEqual(true, result2);
 
+            stringToCheck = "farside";
             try 
             { 
-                bool? result3 = sanitizer.Whitelist.EqualsUsingASCII("farside", "farSiDe", 7);
+                bool? result3 = sanitizer.Whitelist.EqualsUsingASCII(ref stringToCheck, "farSiDe", 7);
 
                 Assert.AreEqual(false, result3);
             }
@@ -216,19 +225,23 @@ namespace ModestSanitizerUnitTests
             Assert.AreEqual(true, wasExceptionThrown);
             Assert.AreEqual("StringToCheck does NOT match whitelist value.", innerExceptionMsg);
 
-            bool? result4 = sanitizer.Whitelist.EqualsUsingASCII("farside", "far", 3);
+            stringToCheck = "farside";
+            bool? result4 = sanitizer.Whitelist.EqualsUsingASCII(ref stringToCheck, "far", 3);
 
             Assert.AreEqual(true, result4);
+            Assert.AreEqual("far", stringToCheck);
 
-            bool? result5 = sanitizer.Whitelist.EqualsIgnoreCaseUsingASCII("faRside", "faR", 3);
+            stringToCheck = "faRside";
+            bool? result5 = sanitizer.Whitelist.EqualsIgnoreCaseUsingASCII(ref stringToCheck, "far", 3);
 
             Assert.AreEqual(true, result5);
+            Assert.AreEqual("far", stringToCheck);
         }
 
         [TestMethod]
         public void Test_BlacklistReview()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
+            Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
             bool wasExceptionThrown = false;
             string innerExceptionMsg = String.Empty;
                    
@@ -237,10 +250,12 @@ namespace ModestSanitizerUnitTests
                 //Hex value for 'javascript:alert(1337)'
                 string hexValue = (@"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29");
 
-                List<string> plainTextBlacklist = new List<string>();
-                plainTextBlacklist.Add(@"javascript: alert(1337)");
-                plainTextBlacklist.Add(@"javascript");
-                plainTextBlacklist.Add(@"alert");
+                List<string> plainTextBlacklist = new List<string>
+                {
+                    @"javascript: alert(1337)",
+                    @"javascript",
+                    @"alert"
+                };
 
                 bool checkForStandardHexBlacklistChars = false;
 
@@ -270,8 +285,10 @@ namespace ModestSanitizerUnitTests
             {
                 string stringWithNullByte = @"myURL%00.biz";
 
-                List<string> plainTextBlacklist = new List<string>();
-                plainTextBlacklist.Add(@"myURL.biz");
+                List<string> plainTextBlacklist = new List<string>
+                {
+                    @"myURL.biz"
+                };
 
                 bool checkForCommonMaliciousChars = false;
 
@@ -298,24 +315,24 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_TruncateToValidLength()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
-            String result = sanitizer.Truncate.TruncateToValidLength("testBigger", 4);
+            Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
+            String result = sanitizer.Truncate.ToValidLength("testBigger", 4);
 
             Assert.AreEqual("test", result);
 
-            String result2 = sanitizer.Truncate.TruncateToValidLength("test", 4);
+            String result2 = sanitizer.Truncate.ToValidLength("test", 4);
 
             Assert.AreEqual("test", result2);
 
-            String result3 = sanitizer.Truncate.TruncateToValidLength("testSmaller", 50);
+            String result3 = sanitizer.Truncate.ToValidLength("testSmaller", 50);
 
             Assert.AreEqual("testSmaller", result3);
 
-            String resultNull = sanitizer.Truncate.TruncateToValidLength(null, 50);
+            String resultNull = sanitizer.Truncate.ToValidLength(null, 50);
 
             Assert.AreEqual(null, resultNull);
 
-            String resultStrEmpty = sanitizer.Truncate.TruncateToValidLength(String.Empty, 50);
+            String resultStrEmpty = sanitizer.Truncate.ToValidLength(String.Empty, 50);
 
             Assert.AreEqual(String.Empty, resultStrEmpty);
         }
@@ -323,7 +340,7 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_NormalizeUnicode()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
+            Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
             String result = sanitizer.NormalizeOrLimit.NormalizeUnicode("äiti");
 
             //Normalize to the nfkc format of Unicode
@@ -344,16 +361,16 @@ namespace ModestSanitizerUnitTests
         }
 
         [TestMethod]
-        public void Test_LimitToASCIIOnly()
+        public void Test_ToASCIIOnly()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
+            Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
 
             //Another approach to have a reliable whitelist (for comparison purposes)
             String potentiallyMaliciousString = "äiti®";
 
             //The idea here is to limit the string of UTF-8 characters to 
             //just the subset of unicode chars that "matches" ASCII characters.
-            String stringLimitedToLetterlikeChars = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString);
+            String stringLimitedToLetterlikeChars = sanitizer.NormalizeOrLimit.ToASCIIOnly(potentiallyMaliciousString);
 
             //Removes the accent from the 'a', but removes the copyright symbol altogether
             Assert.AreEqual("aiti", stringLimitedToLetterlikeChars); //compare
@@ -362,7 +379,7 @@ namespace ModestSanitizerUnitTests
 
             //The idea here is to limit the string of UTF-8 characters to 
             //just the subset of unicode chars that "matches" ASCII characters.
-            String stringLimitedToLetterlikeChars2 = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString2);
+            String stringLimitedToLetterlikeChars2 = sanitizer.NormalizeOrLimit.ToASCIIOnly(potentiallyMaliciousString2);
 
             //Removes the accent from the 'a'
             Assert.AreEqual(@"&euml;,a,&ccedil;,!@#$%^%&*(*)__+~!`';,./<>\|}{-=/*-+.,./?", stringLimitedToLetterlikeChars2); //compare
@@ -371,14 +388,14 @@ namespace ModestSanitizerUnitTests
                                                      
             //The idea here is to limit the string of UTF-8 characters to 
             //just the subset of unicode chars that "matches" ASCII characters.
-            String stringLimitedToLetterlikeChars3 = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString3);
+            String stringLimitedToLetterlikeChars3 = sanitizer.NormalizeOrLimit.ToASCIIOnly(potentiallyMaliciousString3);
 
             //Removes the accent marks from the unicode characters U, n, c O
             Assert.AreEqual("U, U, U, U, n, U, U, c, O", stringLimitedToLetterlikeChars3); //compare
 
             String potentiallyMaliciousString4 = "È,É,Ê,Ë,Û,Ù,Ï,Î,À,Â,Ô,è,é,ê,ë,û,ù,ï,î,à,â,ô";
 
-            String stringLimitedToLetterlikeChars4 = sanitizer.NormalizeOrLimit.LimitToASCIIOnly(potentiallyMaliciousString4);
+            String stringLimitedToLetterlikeChars4 = sanitizer.NormalizeOrLimit.ToASCIIOnly(potentiallyMaliciousString4);
 
             //Removes the accent marks from the unicode characters E, U, I, A, O including lower case versions
             Assert.AreEqual("E,E,E,E,U,U,I,I,A,A,O,e,e,e,e,u,u,i,i,a,a,o", stringLimitedToLetterlikeChars4); //compare
@@ -387,7 +404,7 @@ namespace ModestSanitizerUnitTests
         [TestMethod]
         public void Test_SanitizeViaRegexUsingASCII()
         {
-            Sanitizer sanitizer = new Sanitizer(SaniApproach.ThrowExceptions, true);
+            Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
             bool wasExceptionThrown = false;
             string innerExceptionMsg = String.Empty;
 
@@ -447,7 +464,7 @@ namespace ModestSanitizerUnitTests
             string result5 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("  myfile.txt05-29-2020", 12, false, ".txt", false, false, false, false, false);
             Assert.AreEqual("  myfile.txt", result5);
 
-            Sanitizer sanitizer2 = new Sanitizer(SaniApproach.TrackExceptionsInList, true);
+            Sanitizer sanitizer2 = new Sanitizer(Approach.TrackExceptionsInList, true);
 
             try
             {

@@ -15,22 +15,22 @@ namespace ModestSanitizer
     /// </summary>
     public class Blacklist
     {
-        public Truncate Truncate { get; set; }
+        private Truncate Truncate { get; set; }
 
-        public NormalizeOrLimit NormalizeOrLimit { get; set; }
-        public SaniApproach SanitizerApproach { get; set; }
+        private NormalizeOrLimit NormalizeOrLimit { get; set; }
+        public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
         public Blacklist()
         {
         }
 
-        public Blacklist(SaniApproach sanitizerApproach)
+        public Blacklist(Approach sanitizerApproach)
         {
             SanitizerApproach = sanitizerApproach;
         }
 
-        public Blacklist(Truncate truncate, NormalizeOrLimit normalizeOrLimit, SaniApproach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
+        public Blacklist(Truncate truncate, NormalizeOrLimit normalizeOrLimit, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
         {
             Truncate = truncate;
             NormalizeOrLimit = normalizeOrLimit;
@@ -41,44 +41,47 @@ namespace ModestSanitizer
         //To protect against format string attacks with unsafe keyword: https://owasp.org/www-community/attacks/Format_string_attack
         public static List<string> GenerateHexadecimalBlacklist()
         {
-            List<string> hexBlacklist = new List<string>();
-            hexBlacklist.Add(@"%%");
-            hexBlacklist.Add(@"%p");
-            hexBlacklist.Add(@"%d");
-            hexBlacklist.Add(@"%c");
-            hexBlacklist.Add(@"%u");
-            hexBlacklist.Add(@"%x");
-            hexBlacklist.Add(@"%s");
-            hexBlacklist.Add(@"%n");
-            hexBlacklist.Add(@"\x");
+            List<string> hexBlacklist = new List<string>
+            {
+                @"%%",
+                @"%p",
+                @"%d",
+                @"%c",
+                @"%u",
+                @"%x",
+                @"%s",
+                @"%n",
+                @"\x"
+            };
 
             return hexBlacklist;
         }
         public static List<string> GenerateCommonBlacklist()
         {
-            List<string> commonBlacklist = new List<string>();
-
-            commonBlacklist.Add(@"\0"); //replace null byte with empty string
-            commonBlacklist.Add(@"\u00A0"); //replace non-breaking space with empty string. Regular space U+0020 would be allowed.
-            commonBlacklist.Add(@"\u2B7E"); //replace tab with empty string
-            commonBlacklist.Add(@"\u000A"); //replace new line with empty string
-            commonBlacklist.Add(@"\u000D"); //replace carriage return with empty string
-            commonBlacklist.Add(@"\u2B7F");//replace vertical tab with empty string
-            //commonBlacklist.Add(@"\u005C"); //replace reverse solidus or backslash with empty string
-            commonBlacklist.Add(@"\u200B"); //replace zero-width space character with empty string
-            commonBlacklist.Add(@"\u2009"); //replace thin space with empty string
-            commonBlacklist.Add(@"\u007F"); //replace delete with empty string
-            //commonBlacklist.Add(@"\u007E"); //replace tilde with empty string
-            commonBlacklist.Add(@"\u0000"); //replace null byte with empty string
-            commonBlacklist.Add(@"\u202E"); //replace Left-To-Right with empty string
-            commonBlacklist.Add(@"\u200F"); //replace Right-To-Left with empty string
-            commonBlacklist.Add(@"% 00"); //alert on common examples of null bytes used on hacking sites
-            commonBlacklist.Add(@"%00"); //alert on common examples of null bytes used on hacking sites
-            commonBlacklist.Add(@"\t"); //replace tab with empty string
-            commonBlacklist.Add(@"\n"); //replace new line with empty string
-            commonBlacklist.Add(@"\r"); //replace carriage return with empty string
-            commonBlacklist.Add(@"\v"); //replace vertical tab with empty string
-            commonBlacklist.Add(@"\uFFFD"); //replace U+FFFD REPLACEMENT CHARACTER ('�') with empty string
+            List<string> commonBlacklist = new List<string>
+            {
+                @"\0", //replace null byte with empty string
+                @"\u00A0", //replace non-breaking space with empty string. Regular space U+0020 would be allowed.
+                @"\u2B7E", //replace tab with empty string
+                @"\u000A", //replace new line with empty string
+                @"\u000D", //replace carriage return with empty string
+                @"\u2B7F",//replace vertical tab with empty string
+                          //commonBlacklist.Add(@"\u005C"); //replace reverse solidus or backslash with empty string
+                @"\u200B", //replace zero-width space character with empty string
+                @"\u2009", //replace thin space with empty string
+                @"\u007F", //replace delete with empty string
+                           //commonBlacklist.Add(@"\u007E"); //replace tilde with empty string
+                @"\u0000", //replace null byte with empty string
+                @"\u202E", //replace Left-To-Right with empty string
+                @"\u200F", //replace Right-To-Left with empty string
+                @"% 00", //alert on common examples of null bytes used on hacking sites
+                @"%00", //alert on common examples of null bytes used on hacking sites
+                @"\t", //replace tab with empty string
+                @"\n", //replace new line with empty string
+                @"\r", //replace carriage return with empty string
+                @"\v", //replace vertical tab with empty string
+                @"\uFFFD" //replace U+FFFD REPLACEMENT CHARACTER ('�') with empty string
+            };
 
             return commonBlacklist;
         }
@@ -111,7 +114,7 @@ namespace ModestSanitizer
                     {
                         //Review in Unicode instead of ASCII for this case since the common malicious characters are listed mostly in unicode chars
                         string normalizedString = NormalizeOrLimit.NormalizeUnicode(stringToCheck);
-                        string truncatedString = Truncate.TruncateToValidLength(normalizedString, lengthToTruncateTo);
+                        string truncatedString = Truncate.ToValidLength(normalizedString, lengthToTruncateTo);
 
                         int initialLengthStr = truncatedString.Length;
                         string strPostReplacement = String.Empty;
@@ -143,8 +146,8 @@ namespace ModestSanitizer
                         blacklistValues = hexBlacklist;
                     }
 
-                    string limitedToASCII = NormalizeOrLimit.LimitToASCIIOnly(stringToCheck);
-                    string truncatedValue = Truncate.TruncateToValidLength(limitedToASCII, lengthToTruncateTo);
+                    string limitedToASCII = NormalizeOrLimit.ToASCIIOnly(stringToCheck);
+                    string truncatedValue = Truncate.ToValidLength(limitedToASCII, lengthToTruncateTo);
                    
                     int initialLength = truncatedValue.Length;
                     string stringPostReplacement = String.Empty;
@@ -193,9 +196,9 @@ namespace ModestSanitizer
 
         private void TrackOrThrowException(string msg, string valToClean, Exception ex)
         {
-            string exceptionValue = Truncate.TruncateToValidLength(valToClean, 5);
+            string exceptionValue = Truncate.ToValidLength(valToClean, 5);
 
-            if (SanitizerApproach == SaniApproach.TrackExceptionsInList)
+            if (SanitizerApproach == Approach.TrackExceptionsInList)
             {
                 SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.Blacklist, exceptionValue));
             }
