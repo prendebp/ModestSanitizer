@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using static ModestSanitizer.SaniCore;
 
 namespace ModestSanitizer
 {
@@ -14,7 +11,8 @@ namespace ModestSanitizer
     /// </summary>
     public class Sanitizer
     {
-        public enum SaniTypes{ 
+        public enum SaniTypes
+        {
             None = 0,
             MinMax = 1,
             Truncate = 2,
@@ -25,53 +23,56 @@ namespace ModestSanitizer
             Blacklist = 7
         }
 
-        public enum Approach
-        {
-            None = 0,
-            TrackExceptionsInList = 1,
-            ThrowExceptions = 2
-        }
+        public SaniCore SaniCore { get; set; }
 
-        public enum BlacklistType
-        {
-            None = 0,
-            All = 1,
-            OSCommandInjection = 2,
-            FormatStringAttacks = 3
-        }
-
-        /// <summary>
-        /// Sanitizer Approach to Exceptions
-        /// </summary>
-        public Approach SanitizerApproach { get; set; }
-        public MinMax MinMax {get;set;}
         public Truncate Truncate { get; set; }
+        public Blacklist Blacklist { get; set; }
+        public MinMax MinMax { get; set; }
         public NormalizeOrLimit NormalizeOrLimit { get; set; }
         public FileNameCleanse FileNameCleanse { get; set; }
         public Whitelist Whitelist { get; set; }
-        public Blacklist Blacklist { get; set; }
-        public bool CompileRegex { get; set; }
+
+        public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
 
         public Sanitizer(Approach sanitizerApproach, bool compileRegex) {
-            SanitizerApproach = sanitizerApproach;
-            if (sanitizerApproach == Approach.TrackExceptionsInList)
-            {
-                SaniExceptions = new Dictionary<Guid, KeyValuePair<SaniTypes, string>>();
-            }
-            CompileRegex = compileRegex;
-            Truncate = new Truncate(SanitizerApproach, SaniExceptions);
-            NormalizeOrLimit = new NormalizeOrLimit(Truncate, SanitizerApproach, SaniExceptions);
-            MinMax = new MinMax(Truncate, NormalizeOrLimit, SanitizerApproach, CompileRegex, SaniExceptions);
-            FileNameCleanse = new FileNameCleanse(Truncate, NormalizeOrLimit, SanitizerApproach, CompileRegex, SaniExceptions);
-            Whitelist = new Whitelist(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
-            Blacklist = new Blacklist(Truncate, NormalizeOrLimit, SanitizerApproach, SaniExceptions);
+
+            SaniCore = new SaniCore();
+            SaniCore.SanitizerApproach = sanitizerApproach;
+            SanitizerApproach = SaniCore.SanitizerApproach;
+
+            SaniCore.SaniExceptions = new Dictionary<Guid, KeyValuePair<SaniTypes, string>>();
+            SaniExceptions = SaniCore.SaniExceptions;
+
+            SaniCore.CompileRegex = compileRegex;
+            SaniCore.Truncate = new Truncate(SaniCore);
+            Truncate = SaniCore.Truncate;
+            SaniCore.NormalizeOrLimit = new NormalizeOrLimit(SaniCore);
+            NormalizeOrLimit = SaniCore.NormalizeOrLimit;
+            SaniCore.MinMax = new MinMax(SaniCore);
+            MinMax = SaniCore.MinMax;
+            SaniCore.FileNameCleanse = new FileNameCleanse(SaniCore);
+            FileNameCleanse = SaniCore.FileNameCleanse;
+            SaniCore.Whitelist = new Whitelist(SaniCore);
+            Whitelist = SaniCore.Whitelist;
+            SaniCore.Blacklist = new Blacklist(SaniCore);
+            Blacklist = SaniCore.Blacklist;
+        }
+
+        /// <summary>
+        /// For security purposes, clear the SaniExceptions when done sanitizing since these could store strings that you've cleansed
+        /// </summary>
+        public void ClearSaniExceptions() 
+        {
+            SaniCore.SaniExceptions.Clear();
         }
 
         #region Detailed Notes for Possible Future Features
 
 
         //TODO: Support Filepath cleanse??? Leverage the below with added Regex parser?
+
+        //how to handle @"\\", backslash escape character safely?
 
         ///// <summary>
         ///// Cleans paths of invalid characters.

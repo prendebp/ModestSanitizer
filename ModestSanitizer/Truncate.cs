@@ -14,21 +14,17 @@ namespace ModestSanitizer
     ///  </summary>
     public class Truncate
     {
-        public Approach SanitizerApproach { get; set; }
-        public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+        public SaniCore SaniCore { get; set; }
 
-        public Truncate()
-        {
-        }
+        private int TruncateLength { get; set; }
+        private SaniTypes SaniType { get; set; }
 
-        public Truncate(Approach sanitizerApproach)
+        public Truncate(SaniCore saniCore)
         {
-            SanitizerApproach = sanitizerApproach;
-        }
+            SaniCore = saniCore;
 
-        public Truncate(Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
-        {
-            SaniExceptions = saniExceptions;
+            TruncateLength = 10;
+            SaniType = SaniTypes.Truncate;
         }
 
         /// <summary>
@@ -60,23 +56,10 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackOrThrowException(strToClean, ex);
+                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "Truncate: ", "Error truncating to valid length: ", strToClean, ex);
             }
             return tmpResult;
-        }            
-        
-        private void TrackOrThrowException(string valToClean, Exception ex)
-        {
-            string exceptionValue = ToValidLength(valToClean, 5);
+        } 
 
-            if (SanitizerApproach == Approach.TrackExceptionsInList)
-            {
-                SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.Truncate, exceptionValue));
-            }
-            else
-            {
-                throw new SanitizerException("Error truncating to valid length: " + (exceptionValue ?? String.Empty), ex);
-            }
-        }
     }//end of class
 }//end of namespace

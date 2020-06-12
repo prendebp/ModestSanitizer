@@ -7,7 +7,7 @@ For LDAP encoding see Anti-XSS.
 
 **Use this to:** sanitize the arguments passed in to a Console application or sanitize the values read out of a configuration file, such as application settings or a connection string.
 
-**Caveat:** This should likely be combined with digitally signing any .exe or .dll files (so that a hacker couldn't just call into any .dll that hasn't been signed at will.)
+**Caveat:** This should likely be combined with digitally signing any .exe or .dll files (so that a hacker couldn't just call into any .dll that hasn't been signed at will.) Also, I ship this Nuget package with the .pdb file included for convenience, but you may wish to remove prior to deploying to Production!
 
 **Threat vector:** a hacker who first succeeds in penetrating a network may seek to pivot to other valuable resources or to steal (and exfiltrate) database data. To do so, they may try to run a console app on a given server with random, malicious parameters to see what it may do. Or, they may try to tamper with a web server's configuration file to bypass a web application's authentication or role authorization restrictions. They may also seek to point any configurable email addresses to their own email address with a different domain.
 
@@ -44,22 +44,24 @@ Assert.AreEqual("aiti", stringLimitedToLetterlikeChars);
 //ready for comparison against a whitelist!
 ```
 
-Always try to look for loopholes in your whitelisting efforts.
+Always try to look for loopholes in your whitelisting efforts. 
+
+Also, try to look for overlaps in your blacklisting efforts. The order in which the string is cleansed may impact your blacklist review. If your blacklist contains common malicious characters (such as a null byte) that ModestSanitizer removes prior to checking, a loophole could be introduced. Test for this!
 
 # ModestSanitizer Usage
 
 The ModestSanitizer is defined to sanitize input parameters in multiple steps.
 
-* The first step is to truncate to a predefined character limit. The developer should also check for NULL values or empty strings at this point since Modest Sanitizer will typically return null if a null is passed in.
+* Step One: TRUNCATE. The first step is to truncate to a predefined character limit. The developer should also check for NULL values or empty strings at this point since Modest Sanitizer will typically return null if a null is passed in.
 
-* The second step is to review (and log/alert on) the input strings against any appropriate blacklists. This step should likely be set to TrackExceptionsInList only so as not to automatically (but only optionally based on developer discretion) stop the program if a malicious string is found. This is primarily a monitoring and cleansing step. The following steps would maybe be a more appropriate place to perform a full stop if an exception is found. The returned string will be cleansed of blacklist tokens.
+* Step Two: BLACKLIST. The second step is to review (and log/alert on) the input strings against any appropriate blacklists. This step should likely be set to TrackExceptionsInList only so as not to automatically (but only optionally based on developer discretion) stop the program if a malicious string is found. This is primarily a monitoring and cleansing step. The following steps would maybe be a more appropriate place to perform a full stop if an exception is found. The returned string will be cleansed of blacklist tokens.
 
-* The third step (MinMax) is to convert from strings to other data types, as needed, doing so with pre-defined minimum and maximum values.
+* Step Three: CONVERT. The third step (MinMax) is to convert from strings to other data types, as needed, doing so with pre-defined minimum and maximum values.
 
-* The fourth step for the remaining strings is to normalize them to FormKC. Unicode can represent certain characters as either two characters (e.g. an accent and a letterlike character) or one (e.g. a single character representing the combined accent and letterlike character) depending on the form used. By normalizing to a single form, it is then easier to reliably compare against a whitelist. 
+* Step Four: NORMALIZE OR LIMIT. The fourth step for the remaining strings is to normalize them to FormKC. Unicode can represent certain characters as either two characters (e.g. an accent and a letterlike character) or one (e.g. a single character representing the combined accent and letterlike character) depending on the form used. By normalizing to a single form, it is then easier to reliably compare against a whitelist. 
 
 Alternatively, the strings may instead be limited to just a subset of ASCII characters 32-126, the letterlike or numberlike characters, mathematical operators, and punctuation marks. This again provides even greater reliability when comparing against a whitelist at the expense of being less viable in international scenarios where Unicode may be required.
 
-* The fifth and most important step (when possible) is to define a set of whitelist values and compare these against the now normalized/limited strings of input. This step should likely be set to ThrowExceptions and stop the program or escalate to support/security any true mismatches. FileNameCleanse may also be performed at this step. If whitelist values are NOT possible then at a minimum, at least the format of the input strings should be validated using Regex expressions. 
+* Step Five: WHITELIST. The fifth and most important step (when possible) is to define a set of whitelist values and compare these against the now normalized/limited strings of input. (It also may be potentially worthwhile to blacklist again prior to whitelisting, now that you've normalized/limited.) This whitelist step should likely be set to ThrowExceptions and stop the program or escalate to support/security any true mismatches. FileNameCleanse may also be performed at this step. If whitelist values are NOT possible then at a minimum, at least the format of the input strings should be validated using Regex expressions. 
 
 

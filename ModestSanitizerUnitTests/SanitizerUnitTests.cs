@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModestSanitizer;
+using static ModestSanitizer.SaniCore;
 using static ModestSanitizer.Sanitizer;
 
 namespace ModestSanitizerUnitTests
@@ -131,6 +132,8 @@ namespace ModestSanitizerUnitTests
 
             wasExceptionThrown = false; //re-set flag
 
+            sanitizer.ClearSaniExceptions();
+
             Sanitizer sanitizer2 = new Sanitizer(Approach.TrackExceptionsInList, true);
 
             try
@@ -147,9 +150,8 @@ namespace ModestSanitizerUnitTests
             wasExceptionThrown = false; //re-set flag
 
             KeyValuePair<SaniTypes, string> kvp =  sanitizer2.SaniExceptions.Values.FirstOrDefault<KeyValuePair<SaniTypes, string>>();
-            Assert.AreEqual(kvp.Key, SaniTypes.MinMax);
-            Assert.AreEqual(kvp.Value, "999999999999999999999999999999999");
-
+            Assert.AreEqual(SaniTypes.MinMax, kvp.Key);
+            Assert.AreEqual("MinMax: 9999999999 Exception: Parse Failure.", kvp.Value);
 
             bool? result6 = sanitizer.MinMax.BooleanType.ToValidValue("false");
 
@@ -189,7 +191,9 @@ namespace ModestSanitizerUnitTests
 
             Assert.AreEqual(true, wasExceptionThrown);
 
-            wasExceptionThrown = false; //re-set flag           
+            wasExceptionThrown = false; //re-set flag   
+
+            sanitizer2.ClearSaniExceptions();
         }
 
         [TestMethod]
@@ -236,6 +240,8 @@ namespace ModestSanitizerUnitTests
 
             Assert.AreEqual(true, result5);
             Assert.AreEqual("far", stringToCheck);
+
+            sanitizer.ClearSaniExceptions();
         }
 
         [TestMethod]
@@ -244,12 +250,12 @@ namespace ModestSanitizerUnitTests
             Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
             bool wasExceptionThrown = false;
             string innerExceptionMsg = String.Empty;
-                   
+
+            //Hex value for 'javascript:alert(1337)'
+            string hexValue = (@"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29");
+
             try
             {
-                //Hex value for 'javascript:alert(1337)'
-                string hexValue = (@"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29");
-
                 List<string> plainTextBlacklist = new List<string>
                 {
                     @"javascript: alert(1337)",
@@ -259,13 +265,13 @@ namespace ModestSanitizerUnitTests
 
                 bool checkForStandardHexBlacklistChars = false;
 
-                bool? result1 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(hexValue, plainTextBlacklist, 225, checkForStandardHexBlacklistChars, false);
+                bool? result1 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(ref hexValue, plainTextBlacklist, 225, checkForStandardHexBlacklistChars, false);
 
                 Assert.AreEqual(false, result1); //no match since NOT checking for standard hex characters in the blacklist
 
                 checkForStandardHexBlacklistChars = true;
 
-                bool? result2 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(hexValue, plainTextBlacklist, 225, checkForStandardHexBlacklistChars, true);
+                bool? result2 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(ref hexValue, plainTextBlacklist, 225, checkForStandardHexBlacklistChars, true);
 
                 Assert.AreEqual(true, result2); //match true on hex char \x since bool to check for standard hex blacklist chars was set to true.
             }
@@ -277,30 +283,25 @@ namespace ModestSanitizerUnitTests
 
             Assert.AreEqual(true, wasExceptionThrown);
             Assert.AreEqual("StringToCheck contains a blacklist value.", innerExceptionMsg);
-                      
+            Assert.AreEqual(hexValue, @"6a6176617363726970743a616c65727428133729");
+
             wasExceptionThrown = false; //re-set flag
             innerExceptionMsg = String.Empty; //re-set msg
 
+            string stringWithNullByte = @"\\cmy%pURL%00.biz";
+
             try
             {
-                string stringWithNullByte = @"myURL%00.biz";
-
                 List<string> plainTextBlacklist = new List<string>
                 {
-                    @"myURL.biz"
+                    @"\\c" //NOTE: this resolves to this \\\\c due to the @. Without the asterisk verbatim string it will resolve to \\c
                 };
 
                 bool checkForCommonMaliciousChars = false;
 
-                bool? result3 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(stringWithNullByte, plainTextBlacklist, 225, false, checkForCommonMaliciousChars);
+                bool? result3 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(ref stringWithNullByte, plainTextBlacklist, 225, false, checkForCommonMaliciousChars);
 
-                Assert.AreEqual(false, result3); //no match since NOT checking for common malicious characters in the blacklist
-
-                checkForCommonMaliciousChars = true;
-
-                bool? result4 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(stringWithNullByte, plainTextBlacklist, 225, true, checkForCommonMaliciousChars);
-
-                Assert.AreEqual(true, result4); //match true on null byte %00 since bool to check for common malicious characters blacklist was set to true.
+                Assert.AreEqual(false, result3); //this line will never be reached since SanitizerException thrown since blacklist matched.
             }
             catch (SanitizerException se)
             {
@@ -309,7 +310,39 @@ namespace ModestSanitizerUnitTests
             }
 
             Assert.AreEqual(true, wasExceptionThrown);
-            Assert.AreEqual("StringToCheck contains a common malicious character.", innerExceptionMsg);
+            Assert.AreEqual("StringToCheck contains a blacklist value.", innerExceptionMsg);
+
+            //since we didn't check for common malicious chars it only removed the blacklist value \\c
+            Assert.AreEqual(@"my%pURL%00.biz", stringWithNullByte); 
+
+            string stringWithNullByteAgain = @"\\cmy%pURL%00.biz";
+
+            try
+            {
+                List<string> plainTextBlacklist2 = new List<string>
+                {
+                    @"\c" //NOTE: this resolves to this \\\\c due to the @. Without the asterisk verbatim string it will resolve to \\c
+                };
+
+                bool checkForCommonMaliciousCharsTrue = true; //let's check for common malicious characters this time
+
+                bool? result4 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(ref stringWithNullByteAgain, plainTextBlacklist2, 225, true, checkForCommonMaliciousCharsTrue);
+
+                Assert.AreEqual(true, result4); //match true on null byte %00 since bool to check for common malicious characters blacklist was set to true.
+
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+            Assert.AreEqual("StringToCheck contains a common malicious character and a blacklist value.", innerExceptionMsg);
+
+            Assert.AreEqual(@"myURL.biz", stringWithNullByteAgain);//clears common malicious characters %p and %00 plus blacklist value \\c this time
+
+            sanitizer.ClearSaniExceptions();
         }
 
         [TestMethod]
@@ -335,6 +368,8 @@ namespace ModestSanitizerUnitTests
             String resultStrEmpty = sanitizer.Truncate.ToValidLength(String.Empty, 50);
 
             Assert.AreEqual(String.Empty, resultStrEmpty);
+
+            sanitizer.ClearSaniExceptions();
         }
 
         [TestMethod]
@@ -358,6 +393,8 @@ namespace ModestSanitizerUnitTests
             String whitelist = "\u0073\u0063\u0072\u0069\u0070\u0074"; //'script' in unicode characters of nfkc normalization form.
 
             Assert.AreEqual(whitelist, normalizedString); //compare
+
+            sanitizer.ClearSaniExceptions();
         }
 
         [TestMethod]
@@ -399,6 +436,14 @@ namespace ModestSanitizerUnitTests
 
             //Removes the accent marks from the unicode characters E, U, I, A, O including lower case versions
             Assert.AreEqual("E,E,E,E,U,U,I,I,A,A,O,e,e,e,e,u,u,i,i,a,a,o", stringLimitedToLetterlikeChars4); //compare
+            
+            //Malicious leading Unicode characters prepended to 'script' in unicode characters of nfkc normalization form.
+            String potentiallyMaliciousString5 = "踰\u000D\u0000\u202E\u0073\u0063\u0072\u0069\u0070\u0074"; 
+            String stringLimitedToLetterlikeChars5 = sanitizer.NormalizeOrLimit.ToASCIIOnly(potentiallyMaliciousString5);
+
+            Assert.AreEqual("\u0073\u0063\u0072\u0069\u0070\u0074", stringLimitedToLetterlikeChars5); //retains only chars C# matches to ASCII subset   
+
+            sanitizer.ClearSaniExceptions();
         }
 
         [TestMethod]
@@ -464,12 +509,14 @@ namespace ModestSanitizerUnitTests
             string result5 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("  myfile.txt05-29-2020", 12, false, ".txt", false, false, false, false, false);
             Assert.AreEqual("  myfile.txt", result5);
 
+            sanitizer.ClearSaniExceptions();
+
             Sanitizer sanitizer2 = new Sanitizer(Approach.TrackExceptionsInList, true);
 
             try
             {
                 //Test #6 - should track exception for no file extension
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("999999999999999999999999999999999", 50, false, null, true, true, true, true, true);
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(null, 50, false, null, true, true, true, true, true);
             }
             catch (SanitizerException)
             {
@@ -481,14 +528,15 @@ namespace ModestSanitizerUnitTests
             wasExceptionThrown = false; //re-set flag
 
             KeyValuePair<SaniTypes, string> kvp = sanitizer2.SaniExceptions.Values.FirstOrDefault<KeyValuePair<SaniTypes, string>>();
-            Assert.AreEqual(kvp.Key, SaniTypes.FileNameCleanse);
-            Assert.AreEqual(kvp.Value, "Filename: 999999999999999 Exception: Filename does NOT contain at least one dot character.");
+            Assert.AreEqual(SaniTypes.FileNameCleanse, kvp.Key);
+            Assert.AreEqual("FileNameCleanse:  Exception: Filename cannot be null or empty.", kvp.Value);
 
-            sanitizer2.SaniExceptions.Clear();
+            sanitizer2.ClearSaniExceptions();
 
             try
             {
                 //Test #7 - should track exception for bad file extensions
+                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("9999999999999999999999999", 50, false, null, true, true, true, true, true);
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".", 50, false, null, true, true, true, true, true);
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".pp.tx", 50, false, null, false, false, false, false, false);
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".pptx", 50, false, null, false, false, false, false, false);
@@ -513,7 +561,9 @@ namespace ModestSanitizerUnitTests
 
             wasExceptionThrown = false; //re-set flag
 
-            Assert.AreEqual(12, sanitizer2.SaniExceptions.Count);
+            Assert.AreEqual(13, sanitizer2.SaniExceptions.Count);
+
+            sanitizer2.ClearSaniExceptions();
         }
 
     }//end of class

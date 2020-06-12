@@ -38,6 +38,7 @@
     <Compile Include="Blacklist.cs" />
     <Compile Include="Regex\DateRegex.cs" />
     <Compile Include="DateUtil.cs" />
+    <Compile Include="SaniCore.cs" />
     <Compile Include="Whitelist.cs" />
     <Compile Include="FileNameCleanse.cs" />
     <Compile Include="NormalizeOrLimit.cs" />

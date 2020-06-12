@@ -16,11 +16,10 @@ namespace ModestSanitizer
     /// </summary>
     public class MinMax
     {
-        public bool CompileRegex { get; set; }
-        private Truncate Truncate { get; set; }
-        private NormalizeOrLimit NormalizeOrLimit { get; set; }
-        public Approach SanitizerApproach { get; set; }
-        public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+        private SaniCore SaniCore { get; set; }
+
+        private int TruncateLength { get; set; }
+        private SaniTypes SaniType { get; set; }
 
         public LongType1 LongType { get; set; }
         public DecimalType2 DecimalType { get; set; }
@@ -28,42 +27,33 @@ namespace ModestSanitizer
         public BooleanType4 BooleanType { get; set; }
         public DateTimeType5 DateTimeType { get; set; }
 
-        public MinMax()
+        public MinMax(SaniCore saniCore)
         {
-        }
-        public MinMax(Approach sanitizerApproach): this()
-        {
-            SanitizerApproach = sanitizerApproach;
-        }
+            SaniCore = saniCore;
 
-        public MinMax(Truncate truncate, NormalizeOrLimit normalizeOrLimit, Approach sanitizerApproach, bool compileRegex, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
-        {
-            Truncate = truncate;
-            NormalizeOrLimit = normalizeOrLimit;
-            CompileRegex = compileRegex;
-            SaniExceptions = saniExceptions;
+            TruncateLength = 10;
+            SaniType = SaniTypes.MinMax;
 
-            LongType = new LongType1(CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
-            DecimalType = new DecimalType2(CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
-            IntegerType = new IntegerType3(CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
-            BooleanType = new BooleanType4(CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
-            DateTimeType = new DateTimeType5(this, CompileRegex, NormalizeOrLimit, Truncate, SanitizerApproach, SaniExceptions);
+            LongType = new LongType1(saniCore);
+            DecimalType = new DecimalType2(saniCore);
+            IntegerType = new IntegerType3(saniCore);
+            BooleanType = new BooleanType4(saniCore);
+            DateTimeType = new DateTimeType5(saniCore);
         }
 
         public class LongType1
         {
-            public bool CompileRegex { get; set; }
-            private Truncate Truncate { get; set; }
-            private NormalizeOrLimit NormalizeOrLimit { get; set; }
-            public Approach SanitizerApproach { get; set; }
-            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
-            public LongType1(bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
+            private SaniCore SaniCore { get; set; }
+
+            private int TruncateLength { get; set; }
+            private SaniTypes SaniType { get; set; }
+
+            public LongType1(SaniCore saniCore)
             {
-                CompileRegex = compileRegex;
-                NormalizeOrLimit = normalizeOrLimit;
-                Truncate = truncate;
-                SanitizerApproach = sanitizerApproach;
-                SaniExceptions = saniExceptions;
+                SaniCore = saniCore;
+
+                TruncateLength = 10;
+                SaniType = SaniTypes.MinMax;
             }
 
             /// <summary>
@@ -118,7 +108,7 @@ namespace ModestSanitizer
                 }
                 catch (Exception ex)
                 {
-                    TrackOrThrowException(longToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "MinMax: ", "Error long to valid MinMax value: ", longToClean, ex);
                 }
                 return tmpResult;
             }
@@ -134,19 +124,17 @@ namespace ModestSanitizer
 
         public class DecimalType2
         {
-         
-            public bool CompileRegex { get; set; }
-            private Truncate Truncate { get; set; }
-            private NormalizeOrLimit NormalizeOrLimit { get; set; }
-            public Approach SanitizerApproach { get; set; }
-            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
-            public DecimalType2(bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
+            private SaniCore SaniCore { get; set; }
+
+            private int TruncateLength { get; set; }
+            private SaniTypes SaniType { get; set; }
+
+            public DecimalType2(SaniCore saniCore)
             {
-                CompileRegex = compileRegex;
-                NormalizeOrLimit = normalizeOrLimit;
-                Truncate = truncate;
-                SanitizerApproach = sanitizerApproach;
-                SaniExceptions = saniExceptions;
+                SaniCore = saniCore;
+
+                TruncateLength = 15;
+                SaniType = SaniTypes.MinMax;
             }
 
             /// <summary>
@@ -194,7 +182,7 @@ namespace ModestSanitizer
                         decimalToClean = Replace(decimalToClean, "+", String.Empty, ic); //PositiveSign
                         decimalToClean = Replace(decimalToClean, "-Infinity", String.Empty, ic); //NegativeInfinitySymbol
 
-                        decimalToClean = NormalizeOrLimit.ToASCIINumbersOnly(decimalToClean, true, true, allowNegativeSign, true);
+                        decimalToClean = SaniCore.NormalizeOrLimit.ToASCIINumbersOnly(decimalToClean, true, true, allowNegativeSign, true);
 
                         NumberStyles styles = NumberStyles.Currency;
                         CultureInfo culture = null;
@@ -281,12 +269,14 @@ namespace ModestSanitizer
                 }
                 catch (Exception ex)
                 {
-                    TrackOrThrowException(decimalToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "MinMax: ", "Error decimal to valid MinMax value: ", decimalToClean, ex);
                 }
                 return tmpResult;
             }
         }
+
         //TODO: Create new CurrencyCleanse? To monitor for whitelisted currencies or else log exceptions
+
         //public enum CurrencyType
         //{
         //    None = 0,
@@ -366,18 +356,17 @@ namespace ModestSanitizer
 
         public class IntegerType3
         {
-            public bool CompileRegex { get; set; }
-            private Truncate Truncate { get; set; }
-            private NormalizeOrLimit NormalizeOrLimit { get; set; }
-            public Approach SanitizerApproach { get; set; }
-            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
-            public IntegerType3(bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
+            private SaniCore SaniCore { get; set; }
+
+            private int TruncateLength { get; set; }
+            private SaniTypes SaniType { get; set; }
+
+            public IntegerType3(SaniCore saniCore)
             {
-                CompileRegex = compileRegex;
-                NormalizeOrLimit = normalizeOrLimit;
-                Truncate = truncate;
-                SanitizerApproach = sanitizerApproach;
-                SaniExceptions = saniExceptions;
+                SaniCore = saniCore;
+
+                TruncateLength = 10;
+                SaniType = SaniTypes.MinMax;
             }
 
             /// <summary>
@@ -431,7 +420,7 @@ namespace ModestSanitizer
                 }
                 catch (Exception ex)
                 {
-                    TrackOrThrowException(intToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "MinMax: ", "Error integer to valid MinMax value: ", intToClean, ex);
                 }
                 return tmpResult;
             }
@@ -439,18 +428,17 @@ namespace ModestSanitizer
 
         public class BooleanType4
         {
-            public bool CompileRegex { get; set; }
-            private Truncate Truncate { get; set; }
-            private NormalizeOrLimit NormalizeOrLimit { get; set; }
-            public Approach SanitizerApproach { get; set; }
-            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
-            public BooleanType4(bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
+            private SaniCore SaniCore { get; set; }
+
+            private int TruncateLength { get; set; }
+            private SaniTypes SaniType { get; set; }
+
+            public BooleanType4(SaniCore saniCore)
             {
-                CompileRegex = compileRegex;
-                NormalizeOrLimit = normalizeOrLimit;
-                Truncate = truncate;
-                SanitizerApproach = sanitizerApproach;
-                SaniExceptions = saniExceptions;
+                SaniCore = saniCore;
+
+                TruncateLength = 5;
+                SaniType = SaniTypes.MinMax;
             }
 
             /// <summary>
@@ -473,7 +461,7 @@ namespace ModestSanitizer
                     {
                         bool value;
 
-                        string truncatedValue = Truncate.ToValidLength(boolToClean, 5);
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(boolToClean, 5);
                         bool isSuccess = bool.TryParse(truncatedValue, out value);
 
                         if (isSuccess)
@@ -488,7 +476,7 @@ namespace ModestSanitizer
                 }
                 catch (Exception ex)
                 {
-                    TrackOrThrowException(boolToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "MinMax: ", "Error boolean to valid MinMax value: ", boolToClean, ex);
                 }
                 return tmpResult;
             }
@@ -503,22 +491,19 @@ namespace ModestSanitizer
             SQLServer = 4
         }
         public class DateTimeType5
-        {            
-            public bool CompileRegex { get; set; }
-            private Truncate Truncate { get; set; }
-            private NormalizeOrLimit NormalizeOrLimit { get; set; }
-            public Approach SanitizerApproach { get; set; }
-            public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
-
+        {
+            private SaniCore SaniCore { get; set; }
             MinMax ThisMinMax { get; set; }
-            public DateTimeType5(MinMax thisMinMax, bool compileRegex, NormalizeOrLimit normalizeOrLimit, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
+
+            private int TruncateLength { get; set; }
+            private SaniTypes SaniType { get; set; }
+
+            public DateTimeType5(SaniCore saniCore)
             {
-                ThisMinMax = thisMinMax;
-                CompileRegex = compileRegex;
-                NormalizeOrLimit = normalizeOrLimit;
-                Truncate = truncate;
-                SanitizerApproach = sanitizerApproach;
-                SaniExceptions = saniExceptions;
+                SaniCore = saniCore;
+
+                TruncateLength = 33;
+                SaniType = SaniTypes.MinMax;
             }
 
             /// <summary>
@@ -529,7 +514,7 @@ namespace ModestSanitizer
             /// <returns></returns>         
             public DateTime? ToValidValueUSDefault(string dateToClean, DateUtil.DataType dateDataType)
             {
-                return ThisMinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, DateUtil.Delim.ForwardSlash, MinMax.DateFormat.US, false);
+                return SaniCore.MinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, DateUtil.Delim.ForwardSlash, MinMax.DateFormat.US, false);
             }
 
             /// <summary>
@@ -540,7 +525,7 @@ namespace ModestSanitizer
             /// <returns></returns>         
             public DateTime? ToValidValueUSDefault(string dateToClean, DateUtil.DataType dateDataType, DateUtil.Delim dateDelimiter)
             {
-                return ThisMinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, MinMax.DateFormat.US, false);
+                return SaniCore.MinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, MinMax.DateFormat.US, false);
             }
 
             /// <summary>
@@ -551,7 +536,7 @@ namespace ModestSanitizer
             /// <returns></returns>         
             public DateTime? ToValidValueUSDefault(string dateToClean, DateUtil.DataType dateDataType, DateUtil.Delim dateDelimiter, DateFormat dateFormat)
             {
-                return ThisMinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, dateFormat, false);
+                return SaniCore.MinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, dateFormat, false);
             }
 
             /// <summary>
@@ -562,7 +547,7 @@ namespace ModestSanitizer
             /// <returns></returns>         
             public DateTime? ToValidValueUSDefault(string dateToClean, DateUtil.DataType dateDataType, DateUtil.Delim dateDelimiter, DateFormat dateFormat, bool expectTrailingAMorPM)
             {
-                return ThisMinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, dateFormat, expectTrailingAMorPM);
+                return SaniCore.MinMax.DateTimeType.ToValidValue(dateToClean, new DateTime(2999, 1, 1), new DateTime(1753, 1, 1), dateDataType, dateDelimiter, dateFormat, expectTrailingAMorPM);
             }
             /// <summary>
             /// ToValidValue - enforce max and min value of a nullable datetime
@@ -614,11 +599,11 @@ namespace ModestSanitizer
                         }
 
                         //This includes Truncate to 33 chars (longest datetime format)
-                        dateToClean = NormalizeOrLimit.ToASCIIDateTimesOnly(dateToClean, dateDelimiter, dateDataType, expectTrailingAMorPM);
+                        dateToClean = SaniCore.NormalizeOrLimit.ToASCIIDateTimesOnly(dateToClean, dateDelimiter, dateDataType, expectTrailingAMorPM);
 
                         #region Regex checks and strFormat assignment
 
-                        DateRegex dateRegexObj = new DateRegex(CompileRegex);
+                        DateRegex dateRegexObj = new DateRegex(SaniCore.CompileRegex);
 
                         //Perform specific Regex checks where possible after having already normalized the unicode string and reduced it to ASCII-like characters.
                         if ((dateDataType == DateUtil.DataType.Date) && (dateFormat == DateFormat.US)) //Delimiter slash, dash, or dot
@@ -853,24 +838,11 @@ namespace ModestSanitizer
                 }
                 catch (Exception ex)
                 {
-                    TrackOrThrowException(dateToClean, ex, CompileRegex, Truncate, SanitizerApproach, SaniExceptions);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "MinMax: ", "Error datetime to valid MinMax value: ", dateToClean, ex);
                 }
                 return tmpResult;
             }
         }
-        private static void TrackOrThrowException(string valToClean, Exception ex, bool compileRegex, Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions)
-        {
-            //TODO: apply blacklist to remove potentially malicious characters such as carriage return line feed. Don't want these in the log!
-            string exceptionValue = truncate.ToValidLength(valToClean, 33);
 
-            if (sanitizerApproach == Approach.TrackExceptionsInList)
-            {
-                saniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.MinMax, exceptionValue));
-            }
-            else
-            {
-                throw new SanitizerException("Error reduce to valid MinMax value: " + exceptionValue, ex);
-            }
-        }
     }//end of class
 }//end of namespace

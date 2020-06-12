@@ -16,27 +16,17 @@ namespace ModestSanitizer
     /// </summary>
     public class FileNameCleanse
     {
-        public bool CompileRegex { get; set; }
-        private Truncate Truncate { get; set; }
-        private NormalizeOrLimit NormalizeOrLimit { get; set; }
-        public Approach SanitizerApproach { get; set; }
-        public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+        private SaniCore SaniCore { get; set; }
 
-        public FileNameCleanse()
-        {
-        }
+        private int TruncateLength { get; set; }
+        private SaniTypes SaniType { get; set; }
 
-        public FileNameCleanse(Approach sanitizerApproach)
+        public FileNameCleanse(SaniCore saniCore)
         {
-            SanitizerApproach = sanitizerApproach;
-        }
+            SaniCore = saniCore;
 
-        public FileNameCleanse(Truncate truncate, NormalizeOrLimit normalizeOrLimit, Approach sanitizerApproach, bool compileRegex, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
-        {
-            Truncate = truncate;
-            NormalizeOrLimit = normalizeOrLimit;
-            CompileRegex = compileRegex;
-            SaniExceptions = saniExceptions;
+            TruncateLength = 15;
+            SaniType = SaniTypes.FileNameCleanse;
         }
 
         /// <summary>
@@ -55,11 +45,11 @@ namespace ModestSanitizer
             {
                 if (string.IsNullOrWhiteSpace(filename))
                 {
-                    tmpResult = filename;
+                    throw new Exception("Filename cannot be null or empty.");
                 }
                 else
                 {
-                    tmpResult = Truncate.ToValidLength(filename, maxLength);
+                    tmpResult = SaniCore.Truncate.ToValidLength(filename, maxLength);
 
                     //check for malicious Unicode prior to normalizing and reducing to ASCII-like characters
                     if (ContainsMaliciousCharacters(ref tmpResult))
@@ -68,7 +58,7 @@ namespace ModestSanitizer
                     }
 
                     //normalize prior to checking for dot characters to prevent unicode characters similar to dot
-                    tmpResult = NormalizeOrLimit.ToASCIIOnly(tmpResult);
+                    tmpResult = SaniCore.NormalizeOrLimit.ToASCIIOnly(tmpResult);
 
                     //check for dot characters
                     char dot = '.';
@@ -94,7 +84,7 @@ namespace ModestSanitizer
                     string regex2 = @"^(?!^(PRN|AUX|CLOCK\$|NUL|CON|COM\d|LPT\d|\..*)(\..+)?$)[^\x00-\x1f\\?*:\""<>;|\/]+[^*\x00-\x1F\ .]$";
 
                     bool matchOnWindows = false;
-                    if (CompileRegex)
+                    if (SaniCore.CompileRegex)
                     {
                         //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
                         matchOnWindows = Regex.IsMatch(tmpResult, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -154,7 +144,7 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackOrThrowException("Error sanitizing via Regex using ASCII: ", tmpResult, ex);
+                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "FileNameCleanse: ", "Error sanitizing via Regex using ASCII: ", tmpResult, ex);
             }
 
             return tmpResult;
@@ -168,6 +158,7 @@ namespace ModestSanitizer
             //Also, assure it doesn't contain U+202E or U+200F characters meant to manipulate Left-To-Right or Right-To-Left order
 
             int initialLength = tmpResult.Length;
+
             tmpResult = Replace(tmpResult, "\0", string.Empty, ic); //replace null byte with empty string
             tmpResult = Replace(tmpResult, "\u00A0", string.Empty, ic); //replace non-breaking space with empty string. Regular space U+0020 would be allowed.
             tmpResult = Replace(tmpResult, "\u2B7E", string.Empty, ic); //replace tab with empty string
@@ -397,95 +388,6 @@ namespace ModestSanitizer
             }
             return str;
         }
-
-        private void TrackOrThrowException(string msg, string valToClean, Exception ex)
-        {
-            string exceptionValue = Truncate.ToValidLength(valToClean, 15); //allow a few more characters than normal for troubleshooting filenames
-
-            if (SanitizerApproach == Approach.TrackExceptionsInList)
-            {
-                string exceptionMsg = String.Empty;
-                if (ex != null && ex.Message!= null)
-                {
-                    exceptionMsg = ex.Message;
-                }
-
-                SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.FileNameCleanse, "Filename: " + exceptionValue + " Exception: " + exceptionMsg));
-            }
-            else
-            {
-                throw new SanitizerException(msg + (exceptionValue ?? String.Empty), ex);
-            }
-        }
-
-        #region Notes for future features dealing with Lists or Dictionaries of Whitelists
-
-        //TODO: possibly use this for a comparer in a List or Dictionary to apply OrdinalIgnoreCase?!?
-
-        //Hmm, no this would likely only be used for sorting NOT checking for equality
-        //public class FileName : IComparable
-        //{
-        //    string fname;
-        //    StringComparer comparer;
-
-        //    public FileName(string name, StringComparer comparer)
-        //    {
-        //        if (String.IsNullOrEmpty(name))
-        //            throw new ArgumentNullException("name");
-
-        //        this.fname = name;
-
-        //        if (comparer != null)
-        //            this.comparer = comparer;
-        //        else
-        //            this.comparer = StringComparer.OrdinalIgnoreCase;
-        //    }
-
-        //    public string Name
-        //    {
-        //        get { return fname; }
-        //    }
-
-        //    public int CompareTo(object obj)
-        //    {
-        //        if (obj == null) return 1;
-
-        //        if (!(obj is FileName))
-        //            return comparer.Compare(this.fname, obj.ToString());
-        //        else
-        //            return comparer.Compare(this.fname, ((FileName)obj).Name);
-        //    }
-        //}
-
-        //TODO: For Dictionary Use IEqualityComparer<MyClass> https://stackoverflow.com/questions/36867248/is-icomparable-the-best-way-to-use-to-enforce-unique-keys-in-dictionary
-        //void Main()
-        //{
-        //    var dict = new Dictionary<MyClass, string>(new MyClassUniqueIdEqualityComparer());
-
-        //    dict.Add(new UserQuery.MyClass { UniqueId = 1 }, "Hi!");
-
-        //    dict.ContainsKey(new UserQuery.MyClass { UniqueId = 2 }).Dump(); // False
-        //    dict.ContainsKey(new UserQuery.MyClass { UniqueId = 1 }).Dump(); // True
-        //}
-
-        //public class MyClass
-        //{
-        //    public int UniqueId { get; set; }
-        //}
-
-        //public class MyClassUniqueIdEqualityComparer : IEqualityComparer<MyClass>
-        //{
-        //    public bool Equals(MyClass a, MyClass b)
-        //    {
-        //        return a.UniqueId == b.UniqueId;
-        //    }
-
-        //    public int GetHashCode(MyClass a)
-        //    {
-        //        return a.UniqueId.GetHashCode();
-        //    }
-        //}
-        #endregion
 
     }//end of class
 }//end of namespace

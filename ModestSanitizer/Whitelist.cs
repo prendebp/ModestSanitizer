@@ -15,25 +15,17 @@ namespace ModestSanitizer
     /// </summary>
     public class Whitelist
     {
-        private Truncate Truncate { get; set; }
-        private NormalizeOrLimit NormalizeOrLimit { get; set; }
-        public Approach SanitizerApproach { get; set; }
-        public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+        private SaniCore SaniCore { get; set; }
 
-        public Whitelist()
-        {
-        }
+        private int TruncateLength { get; set; }
+        private SaniTypes SaniType { get; set; }
 
-        public Whitelist(Approach sanitizerApproach)
+        public Whitelist(SaniCore saniCore)
         {
-            SanitizerApproach = sanitizerApproach;
-        }
+            SaniCore = saniCore;
 
-        public Whitelist(Truncate truncate, NormalizeOrLimit normalizeOrLimit, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
-        {
-            Truncate = truncate;
-            NormalizeOrLimit = normalizeOrLimit;
-            SaniExceptions = saniExceptions;
+            TruncateLength = 10;
+            SaniType = SaniTypes.Whitelist;
         }
 
         /// <summary>
@@ -58,8 +50,8 @@ namespace ModestSanitizer
                 }
                 else
                 {
-                    string limitedToASCII = NormalizeOrLimit.ToASCIIOnly(stringToCheck);
-                    string truncatedValue = Truncate.ToValidLength(limitedToASCII, lengthToTruncateTo);
+                    string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(stringToCheck);
+                    string truncatedValue = SaniCore.Truncate.ToValidLength(limitedToASCII, lengthToTruncateTo);
                     bool isSuccess = (truncatedValue.Equals(whitelistValue));
 
                     if (isSuccess)
@@ -75,11 +67,10 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackOrThrowException("Issue with Whitelist Equals method", stringToCheck, ex);
+                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "Whitelist: ", "Issue with Whitelist Equals method", stringToCheck, ex);
             }
             return tmpResult;
         }
-
 
         /// <summary>
         /// Equals - compare string to check against whitelist value while ignoring case sensitivity. Sets stringToCheck to whitelist value (including case) if equivalent.
@@ -103,8 +94,8 @@ namespace ModestSanitizer
                 }
                 else
                 {                    
-                    string truncatedValue = Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
-                    string limitedToASCII = NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+                    string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                    string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
                     StringComparison ic = StringComparison.OrdinalIgnoreCase;
 
                     int initialLength = limitedToASCII.Length;
@@ -126,7 +117,7 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackOrThrowException("Issue with Whitelist EqualsIgnoreCase method", stringToCheck, ex);
+                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "Whitelist: ", "Issue with Whitelist EqualsIgnoreCase method", stringToCheck, ex);
             }
             return tmpResult;
         }
@@ -148,18 +139,5 @@ namespace ModestSanitizer
             return str;
         }
 
-        private void TrackOrThrowException(string msg, string valToClean, Exception ex)
-        {
-            string exceptionValue = Truncate.ToValidLength(valToClean, 5);
-
-            if (SanitizerApproach == Approach.TrackExceptionsInList)
-            {
-                SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.Whitelist, exceptionValue));
-            }
-            else
-            {
-                throw new SanitizerException(msg + (exceptionValue ?? String.Empty), ex);
-            }
-        }
     }//end of class
 }//end of namespace

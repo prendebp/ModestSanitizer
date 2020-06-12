@@ -15,23 +15,17 @@ namespace ModestSanitizer
     /// </summary>
     public class NormalizeOrLimit
     {
-        private Truncate Truncate { get; set; }
-        public Approach SanitizerApproach { get; set; }
-        public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
+        private SaniCore SaniCore { get; set; }
 
-        public NormalizeOrLimit()
-        {
-        }
+        private int TruncateLength { get; set; }
+        private SaniTypes SaniType { get; set; }
 
-        public NormalizeOrLimit(Approach sanitizerApproach)
+        public NormalizeOrLimit(SaniCore saniCore)
         {
-            SanitizerApproach = sanitizerApproach;
-        }
+            SaniCore = saniCore;
 
-        public NormalizeOrLimit(Truncate truncate, Approach sanitizerApproach, Dictionary<Guid, KeyValuePair<SaniTypes, string>> saniExceptions) : this(sanitizerApproach)
-        {
-            Truncate = truncate;
-            SaniExceptions = saniExceptions;
+            TruncateLength = 10;
+            SaniType = SaniTypes.NormalizeOrLimit;
         }
 
         /// <summary>
@@ -66,12 +60,11 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackOrThrowException("Error normalizing unicode: ", strToClean, ex);
+                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "NormalizeOrLimit: ", "Error normalizing unicode: ", strToClean, ex);
             }
 
             return tmpResult;
         }
-
 
         /// <summary>
         /// Limit a Unicode string to just the limited subset of ASCII-compatible characters.
@@ -156,7 +149,7 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackOrThrowException("Error limiting unicode to ASCII: ", strToClean, ex);
+                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "NormalizeOrLimit: ", "Error limiting unicode to ASCII: ", strToClean, ex);
             }
             return tmpResult;
         }
@@ -172,7 +165,6 @@ namespace ModestSanitizer
 
             try
             {
-
                 if (string.IsNullOrWhiteSpace(strToClean))
                 {
                     tmpResult = strToClean;
@@ -194,7 +186,7 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackOrThrowException("Error limiting unicode to ASCII Numbers Only: ", strToClean, ex);
+                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "NormalizeOrLimit: ", "Error limiting unicode to ASCII Numbers Only: ", strToClean, ex);
             }
             return tmpResult;
         }
@@ -221,7 +213,7 @@ namespace ModestSanitizer
                 }
                 else
                 {
-                    tmpResult = Truncate.ToValidLength(strToClean, 33);
+                    tmpResult = SaniCore.Truncate.ToValidLength(strToClean, 33);
                     tmpResult = tmpResult.Normalize(NormalizationForm.FormKC);//just to be extra safe
                   
                     //Example 12-8-2015 15:15
@@ -291,7 +283,7 @@ namespace ModestSanitizer
             }
             catch (Exception ex)
             {
-                TrackOrThrowException("Error limiting unicode to ASCII DateTimes Only: ", strToClean, ex);
+                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "NormalizeOrLimit: ", "Error limiting unicode to ASCII DateTimes Only: ", strToClean, ex);
             }
             return tmpResult;
         }
@@ -318,18 +310,5 @@ namespace ModestSanitizer
             return encoding.GetString(rawData).Contains("?"); //will replace ill-formed data with '?'
         }
 
-        private void TrackOrThrowException(string msg, string valToClean, Exception ex)
-        {
-            string exceptionValue = Truncate.ToValidLength(valToClean, 5);
-
-            if (SanitizerApproach == Approach.TrackExceptionsInList)
-            {
-                SaniExceptions.Add(Guid.NewGuid(), new KeyValuePair<SaniTypes, string>(SaniTypes.NormalizeOrLimit, exceptionValue));
-            }
-            else
-            {
-                throw new SanitizerException(msg + (exceptionValue ?? String.Empty), ex);
-            }
-        }
     }//end of class
 }//end of namespace
