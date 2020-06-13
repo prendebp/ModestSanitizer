@@ -17,20 +17,20 @@ namespace ModestSanitizer
             MinMax = 1,
             Truncate = 2,
             NormalizeOrLimit = 3,
-            Whitelist = 4,
+            AllowedList = 4,
             SQLInjection = 5,
             FileNameCleanse = 6,
-            Blacklist = 7
+            RestrictedList = 7
         }
 
         public SaniCore SaniCore { get; set; }
 
         public Truncate Truncate { get; set; }
-        public Blacklist Blacklist { get; set; }
+        public RestrictedList RestrictedList { get; set; }
         public MinMax MinMax { get; set; }
         public NormalizeOrLimit NormalizeOrLimit { get; set; }
         public FileNameCleanse FileNameCleanse { get; set; }
-        public Whitelist Whitelist { get; set; }
+        public AllowedList AllowedList { get; set; }
 
         public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
@@ -53,10 +53,10 @@ namespace ModestSanitizer
             MinMax = SaniCore.MinMax;
             SaniCore.FileNameCleanse = new FileNameCleanse(SaniCore);
             FileNameCleanse = SaniCore.FileNameCleanse;
-            SaniCore.Whitelist = new Whitelist(SaniCore);
-            Whitelist = SaniCore.Whitelist;
-            SaniCore.Blacklist = new Blacklist(SaniCore);
-            Blacklist = SaniCore.Blacklist;
+            SaniCore.AllowedList = new AllowedList(SaniCore);
+            AllowedList = SaniCore.AllowedList;
+            SaniCore.RestrictedList = new RestrictedList(SaniCore);
+            RestrictedList = SaniCore.RestrictedList;
         }
 
         /// <summary>
@@ -156,7 +156,7 @@ namespace ModestSanitizer
         //                                           "select", "sys","sysobjects","syscolumns",
         //                                           "table","update"};
 
-        ////The utility method that performs the blacklist comparisons
+        ////The utility method that performs the restrictedList comparisons
         ////You can change the error handling, and error redirect location to whatever makes sense for your site.
         //private void CheckInput(string parameter)
         //{

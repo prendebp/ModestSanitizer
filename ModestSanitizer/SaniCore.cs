@@ -19,11 +19,11 @@ namespace ModestSanitizer
         public bool CompileRegex { get; set; }
 
         public Truncate Truncate { get; set; }
-        public Blacklist Blacklist { get; set; }
+        public RestrictedList RestrictedList { get; set; }
         public MinMax MinMax { get; set; }
         public NormalizeOrLimit NormalizeOrLimit { get; set; }
         public FileNameCleanse FileNameCleanse { get; set; }
-        public Whitelist Whitelist { get; set; }
+        public AllowedList AllowedList { get; set; }
 
         public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }

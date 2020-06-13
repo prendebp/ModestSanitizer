@@ -197,26 +197,26 @@ namespace ModestSanitizerUnitTests
         }
 
         [TestMethod]
-        public void Test_WhitelistEquals()
+        public void Test_AllowedListEquals()
         {
             Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
             bool wasExceptionThrown = false;
             string innerExceptionMsg = String.Empty;
 
             string stringToCheck = "farside";
-            bool? result = sanitizer.Whitelist.EqualsUsingASCII(ref stringToCheck, "farside", 7);
+            bool? result = sanitizer.AllowedList.ASCII.Matches(ref stringToCheck, "farside", 7);
 
             Assert.AreEqual(true, result);
             Assert.AreEqual("farside", stringToCheck);
 
-            bool? result2 = sanitizer.Whitelist.EqualsIgnoreCaseUsingASCII(ref stringToCheck, "farSiDe", 7);
+            bool? result2 = sanitizer.AllowedList.ASCII.MatchesIgnoreCase(ref stringToCheck, "farSiDe", 7);
 
             Assert.AreEqual(true, result2);
 
             stringToCheck = "farside";
             try 
             { 
-                bool? result3 = sanitizer.Whitelist.EqualsUsingASCII(ref stringToCheck, "farSiDe", 7);
+                bool? result3 = sanitizer.AllowedList.ASCII.Matches(ref stringToCheck, "farSiDe", 7);
 
                 Assert.AreEqual(false, result3);
             }
@@ -227,25 +227,44 @@ namespace ModestSanitizerUnitTests
             }
 
             Assert.AreEqual(true, wasExceptionThrown);
-            Assert.AreEqual("StringToCheck does NOT match whitelist value.", innerExceptionMsg);
+            Assert.AreEqual("StringToCheck does NOT match allowedList value.", innerExceptionMsg);
 
             stringToCheck = "farside";
-            bool? result4 = sanitizer.Whitelist.EqualsUsingASCII(ref stringToCheck, "far", 3);
+            bool? result4 = sanitizer.AllowedList.ASCII.Matches(ref stringToCheck, "far", 3);
 
             Assert.AreEqual(true, result4);
             Assert.AreEqual("far", stringToCheck);
 
             stringToCheck = "faRside";
-            bool? result5 = sanitizer.Whitelist.EqualsIgnoreCaseUsingASCII(ref stringToCheck, "far", 3);
+            bool? result5 = sanitizer.AllowedList.ASCII.MatchesIgnoreCase(ref stringToCheck, "far", 3);
 
             Assert.AreEqual(true, result5);
             Assert.AreEqual("far", stringToCheck);
 
+            stringToCheck = @"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29";
+            bool? result6 = sanitizer.AllowedList.Unicode.Matches(ref stringToCheck, @"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29", 250);
+
+            Assert.AreEqual(true, result6);
+
+            //NOTE: This Unicode string is NOT equal since it was NOT prepended with an @ verbatim symbol. This causes a variance of \ versus \\
+            //Be careful of this in your allowlist comparisons.
+            Assert.AreNotEqual("\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29", stringToCheck);
+
+            stringToCheck = "Delta Δ and Pi(\u03a0) and Sigma(\u03a3)"; //Δ  is Delta capital letter. δ is Delta lower case letter. Equal when ignore case.
+            bool? result7 = sanitizer.AllowedList.Unicode.MatchesIgnoreCase(ref stringToCheck, "Delta δ and Pi(\u03a0) and Sigma(\u03a3)", 250);
+
+            Assert.AreEqual(true, result7);
+            //NOTE: stringToCheck reverts to the AllowList version in terms of case. This is to favor the expected case.            
+            Assert.AreEqual("Delta δ and Pi(\u03a0) and Sigma(\u03a3)", stringToCheck);
+
+            //TODO: Test further variances
+            //string s1 = "He said, \"This is the last \u0063hance\x0021\"";
+            //string s2 = @"He said, ""This is the last \u0063hance\x0021""";
             sanitizer.ClearSaniExceptions();
         }
 
         [TestMethod]
-        public void Test_BlacklistReview()
+        public void Test_RestrictedListReview()
         {
             Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
             bool wasExceptionThrown = false;
@@ -256,24 +275,24 @@ namespace ModestSanitizerUnitTests
 
             try
             {
-                List<string> plainTextBlacklist = new List<string>
+                List<string> plainTextRestrictedList = new List<string>
                 {
                     @"javascript: alert(1337)",
                     @"javascript",
                     @"alert"
                 };
 
-                bool checkForStandardHexBlacklistChars = false;
+                bool checkForStandardHexRestrictedListChars = false;
 
-                bool? result1 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(ref hexValue, plainTextBlacklist, 225, checkForStandardHexBlacklistChars, false);
+                bool? result1 = sanitizer.RestrictedList.ReviewIgnoreCaseUsingASCII(ref hexValue, plainTextRestrictedList, 225, checkForStandardHexRestrictedListChars, false);
 
-                Assert.AreEqual(false, result1); //no match since NOT checking for standard hex characters in the blacklist
+                Assert.AreEqual(false, result1); //no match since NOT checking for standard hex characters in the restrictedList
 
-                checkForStandardHexBlacklistChars = true;
+                checkForStandardHexRestrictedListChars = true;
 
-                bool? result2 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(ref hexValue, plainTextBlacklist, 225, checkForStandardHexBlacklistChars, true);
+                bool? result2 = sanitizer.RestrictedList.ReviewIgnoreCaseUsingASCII(ref hexValue, plainTextRestrictedList, 225, checkForStandardHexRestrictedListChars, true);
 
-                Assert.AreEqual(true, result2); //match true on hex char \x since bool to check for standard hex blacklist chars was set to true.
+                Assert.AreEqual(true, result2); //match true on hex char \x since bool to check for standard hex restrictedList chars was set to true.
             }
             catch (SanitizerException se)
             {
@@ -282,7 +301,7 @@ namespace ModestSanitizerUnitTests
             }
 
             Assert.AreEqual(true, wasExceptionThrown);
-            Assert.AreEqual("StringToCheck contains a blacklist value.", innerExceptionMsg);
+            Assert.AreEqual("StringToCheck contains a restrictedList value.", innerExceptionMsg);
             Assert.AreEqual(hexValue, @"6a6176617363726970743a616c65727428133729");
 
             wasExceptionThrown = false; //re-set flag
@@ -292,16 +311,16 @@ namespace ModestSanitizerUnitTests
 
             try
             {
-                List<string> plainTextBlacklist = new List<string>
+                List<string> plainTextRestrictedList = new List<string>
                 {
                     @"\\c" //NOTE: this resolves to this \\\\c due to the @. Without the asterisk verbatim string it will resolve to \\c
                 };
 
                 bool checkForCommonMaliciousChars = false;
 
-                bool? result3 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(ref stringWithNullByte, plainTextBlacklist, 225, false, checkForCommonMaliciousChars);
+                bool? result3 = sanitizer.RestrictedList.ReviewIgnoreCaseUsingASCII(ref stringWithNullByte, plainTextRestrictedList, 225, false, checkForCommonMaliciousChars);
 
-                Assert.AreEqual(false, result3); //this line will never be reached since SanitizerException thrown since blacklist matched.
+                Assert.AreEqual(false, result3); //this line will never be reached since SanitizerException thrown since restrictedList matched.
             }
             catch (SanitizerException se)
             {
@@ -310,25 +329,25 @@ namespace ModestSanitizerUnitTests
             }
 
             Assert.AreEqual(true, wasExceptionThrown);
-            Assert.AreEqual("StringToCheck contains a blacklist value.", innerExceptionMsg);
+            Assert.AreEqual("StringToCheck contains a restrictedList value.", innerExceptionMsg);
 
-            //since we didn't check for common malicious chars it only removed the blacklist value \\c
+            //since we didn't check for common malicious chars it only removed the restrictedList value \\c
             Assert.AreEqual(@"my%pURL%00.biz", stringWithNullByte); 
 
             string stringWithNullByteAgain = @"\\cmy%pURL%00.biz";
 
             try
             {
-                List<string> plainTextBlacklist2 = new List<string>
+                List<string> plainTextRestrictedList2 = new List<string>
                 {
                     @"\c" //NOTE: this resolves to this \\\\c due to the @. Without the asterisk verbatim string it will resolve to \\c
                 };
 
                 bool checkForCommonMaliciousCharsTrue = true; //let's check for common malicious characters this time
 
-                bool? result4 = sanitizer.Blacklist.ReviewIgnoreCaseUsingASCII(ref stringWithNullByteAgain, plainTextBlacklist2, 225, true, checkForCommonMaliciousCharsTrue);
+                bool? result4 = sanitizer.RestrictedList.ReviewIgnoreCaseUsingASCII(ref stringWithNullByteAgain, plainTextRestrictedList2, 225, true, checkForCommonMaliciousCharsTrue);
 
-                Assert.AreEqual(true, result4); //match true on null byte %00 since bool to check for common malicious characters blacklist was set to true.
+                Assert.AreEqual(true, result4); //match true on null byte %00 since bool to check for common malicious characters restrictedList was set to true.
 
             }
             catch (SanitizerException se)
@@ -338,9 +357,9 @@ namespace ModestSanitizerUnitTests
             }
 
             Assert.AreEqual(true, wasExceptionThrown);
-            Assert.AreEqual("StringToCheck contains a common malicious character and a blacklist value.", innerExceptionMsg);
+            Assert.AreEqual("StringToCheck contains a common malicious character and a restrictedList value.", innerExceptionMsg);
 
-            Assert.AreEqual(@"myURL.biz", stringWithNullByteAgain);//clears common malicious characters %p and %00 plus blacklist value \\c this time
+            Assert.AreEqual(@"myURL.biz", stringWithNullByteAgain);//clears common malicious characters %p and %00 plus restrictedList value \\c this time
 
             sanitizer.ClearSaniExceptions();
         }
@@ -386,13 +405,13 @@ namespace ModestSanitizerUnitTests
             //Assert.AreEqual("\u00e4\u0069\u0074\u0069", unorm.nfc(str));
             //Assert.AreEqual("\u0061\u0308\u0069\u0074\u0069", unorm.nfd(str));
 
-            //The idea here is to have a reliable whitelist (for comparison purposes)
+            //The idea here is to have a reliable allowedList (for comparison purposes)
             String potentiallyMaliciousString = "script";
             String normalizedString = sanitizer.NormalizeOrLimit.NormalizeUnicode(potentiallyMaliciousString); //normalize to nfkc format
 
-            String whitelist = "\u0073\u0063\u0072\u0069\u0070\u0074"; //'script' in unicode characters of nfkc normalization form.
+            String allowedList = "\u0073\u0063\u0072\u0069\u0070\u0074"; //'script' in unicode characters of nfkc normalization form.
 
-            Assert.AreEqual(whitelist, normalizedString); //compare
+            Assert.AreEqual(allowedList, normalizedString); //compare
 
             sanitizer.ClearSaniExceptions();
         }
@@ -402,7 +421,7 @@ namespace ModestSanitizerUnitTests
         {
             Sanitizer sanitizer = new Sanitizer(Approach.ThrowExceptions, true);
 
-            //Another approach to have a reliable whitelist (for comparison purposes)
+            //Another approach to have a reliable allowedList (for comparison purposes)
             String potentiallyMaliciousString = "äiti®";
 
             //The idea here is to limit the string of UTF-8 characters to 
@@ -549,7 +568,7 @@ namespace ModestSanitizerUnitTests
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("test \"escape\".txt", 50, false, null, false, false, false, false, false);
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("C:\\My Folder <test>.\\", 50, false, null, false, false, false, false, false);
 
-                //test blacklist for Office files - set disallow to true
+                //test restrictedList for Office files - set disallow to true
                 sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("abc.docx", 50, false, null, false, false, true, false, false);
             }
             catch (SanitizerException)

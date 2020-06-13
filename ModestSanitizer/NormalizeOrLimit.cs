@@ -11,7 +11,7 @@ namespace ModestSanitizer
     /// <summary>
     ///  NormalizeOrLimit = 3
     ///  NormalizeUnicode or ToASCIIOnly
-    //   Why? To assist with safe whitelisting
+    //   Why? To assist with safe allowedListing
     /// </summary>
     public class NormalizeOrLimit
     {
@@ -29,7 +29,7 @@ namespace ModestSanitizer
         }
 
         /// <summary>
-        /// Normalize Unicode for if you are planning to compare against a Unicode Whitelist (so you know which Normalization Form to use.)
+        /// Normalize Unicode for if you are planning to compare against a Unicode AllowedList (so you know which Normalization Form to use.)
         /// </summary>
         /// <param name="strToClean"></param>
         /// <returns></returns>   

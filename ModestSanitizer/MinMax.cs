@@ -275,7 +275,7 @@ namespace ModestSanitizer
             }
         }
 
-        //TODO: Create new CurrencyCleanse? To monitor for whitelisted currencies or else log exceptions
+        //TODO: Create new CurrencyCleanse? To monitor for allowedListed currencies or else log exceptions
 
         //public enum CurrencyType
         //{

@@ -46,7 +46,7 @@ namespace ModestSanitizer
                 }
             }
 
-            //Limit to ASCII Only and remove possible malicious characters - apply a limited whitelist to protect the log
+            //Limit to ASCII Only and remove possible malicious characters - apply a limited allowedList to protect the log
             exceptionValue = (new string(exceptionValue.ToCharArray().Where(c => ((32 <= (int)c && (int)c <= 126)
             && ((int)c != 37) //% sign - could be part of hexadecimal character
             && ((int)c != 47) //forward slash - could be part of a malicious URL

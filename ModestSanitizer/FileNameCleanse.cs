@@ -106,15 +106,15 @@ namespace ModestSanitizer
 
                     if (optionalWhiteListFileExtension != null) //compare exclusive here
                     {
-                        //If a whitelist file extension was NOT provided and matched then throw an exception.
+                        //If a allowedList file extension was NOT provided and matched then throw an exception.
                         if (!String.Equals(optionalWhiteListFileExtension, tmpResultFileExtension, StringComparison.OrdinalIgnoreCase))
                         {
-                            throw new Exception("Filename extension fails to match the whitelist file extension.");
+                            throw new Exception("Filename extension fails to match the allowedList file extension.");
                         }
                     }
                     else 
                     {
-                        //If no whitelist file extension was provided and if blacklist options were flagged true, apply the blacklists                        
+                        //If no allowedList file extension was provided and if restrictedList options were flagged true, apply the restrictedLists                        
                         if (disallowExecutableExtensions && ContainsExecutableExtensions(ref tmpResult))
                         {
                             throw new Exception("Filename contains common executable extensions.");
