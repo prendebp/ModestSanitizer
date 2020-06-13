@@ -7,9 +7,9 @@ For LDAP encoding see Anti-XSS.
 
 **USE THIS TO:** sanitize the arguments passed in to a Console application or sanitize the values read out of a configuration file, such as application settings or a connection string.
 
-**CAVEAT:** This should likely be combined with digitally signing any .exe or .dll files (so that a hacker couldn't just call into any .dll that hasn't been signed at will.) Also, I ship this Nuget package with the .pdb file included for convenience, but you may wish to remove prior to deploying to Production!
+**CAVEAT:** This should likely be combined with digitally signing any .exe or .dll files (so that a hacker couldn't just tamper with a .dll or .exe that hasn't been signed.) Also, I ship this Nuget package with the .pdb file included for convenience, but you may wish to remove prior to deploying to Production!
 
-**THREAT VECTOR:** a hacker who first succeeds in penetrating a network may seek to pivot to other valuable resources or to steal (and exfiltrate) database data. To do so, they may try to run a console app on a given server with random, malicious parameters to see what it may do. Or, they may try to tamper with a web server's configuration file to bypass a web application's authentication or role authorization restrictions. They may also seek to point any configurable email addresses to their own email address with a different domain.
+**THREAT VECTOR:** a hacker who first succeeds in penetrating a network may seek to pivot to other valuable resources or to steal (and exfiltrate) database data. To do so, they may try to run a console app on a given server with random, malicious parameters to see what it may do. Or, they may try to tamper with a web server's configuration file to bypass a web application's authentication or role authorization restrictions. They may also seek to point any configurable email addresses to their own email address with a different domain. This library is a small step to try to prevent that.
 
 **ADVICE:** Validate all input
 
