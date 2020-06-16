@@ -169,7 +169,7 @@ namespace ModestSanitizer
 
                 if (String.IsNullOrWhiteSpace(stringToCheck))
                 {
-                    tmpResult = null;
+                    tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                 }
                 else
                 {
@@ -219,7 +219,9 @@ namespace ModestSanitizer
                     if (checkForHexChars == true)
                     {
                         List<string> hexRestrictedList = RestrictedList.GenerateHexAndEscapeSeqRestrictedList();
-                        hexRestrictedList.AddRange(restrictedListValues); //check for hex values first before the developer-defined restrictedList to avoid tainting
+
+                        //Check for hex values first before the developer - defined restrictedList to avoid tainting
+                        hexRestrictedList.AddRange(restrictedListValues); //Add restricted values to the end
                         restrictedListValues = hexRestrictedList;
                     }
 

@@ -204,19 +204,19 @@ namespace ModestSanitizerUnitTests
             string innerExceptionMsg = String.Empty;
 
             string stringToCheck = "farside";
-            bool? result = sanitizer.AllowedList.ASCII.Matches(ref stringToCheck, "farside", 7);
+            bool? result = sanitizer.AllowedList.ASCII.EqualsValue(ref stringToCheck, "farside", 7);
 
             Assert.AreEqual(true, result);
             Assert.AreEqual("farside", stringToCheck);
 
-            bool? result2 = sanitizer.AllowedList.ASCII.MatchesIgnoreCase(ref stringToCheck, "farSiDe", 7);
+            bool? result2 = sanitizer.AllowedList.ASCII.EqualsValueIgnoreCase(ref stringToCheck, "farSiDe", 7);
 
             Assert.AreEqual(true, result2);
 
             stringToCheck = "farside";
             try 
             { 
-                bool? result3 = sanitizer.AllowedList.ASCII.Matches(ref stringToCheck, "farSiDe", 7);
+                bool? result3 = sanitizer.AllowedList.ASCII.EqualsValue(ref stringToCheck, "farSiDe", 7);
 
                 Assert.AreEqual(false, result3);
             }
@@ -227,22 +227,22 @@ namespace ModestSanitizerUnitTests
             }
 
             Assert.AreEqual(true, wasExceptionThrown);
-            Assert.AreEqual("StringToCheck does NOT match allowedList value.", innerExceptionMsg);
+            Assert.AreEqual("StringToCheck does NOT equal allowedList value.", innerExceptionMsg);
 
             stringToCheck = "farside";
-            bool? result4 = sanitizer.AllowedList.ASCII.Matches(ref stringToCheck, "far", 3);
+            bool? result4 = sanitizer.AllowedList.ASCII.EqualsValue(ref stringToCheck, "far", 3);
 
             Assert.AreEqual(true, result4);
             Assert.AreEqual("far", stringToCheck);
 
             stringToCheck = "faRside";
-            bool? result5 = sanitizer.AllowedList.ASCII.MatchesIgnoreCase(ref stringToCheck, "far", 3);
+            bool? result5 = sanitizer.AllowedList.ASCII.EqualsValueIgnoreCase(ref stringToCheck, "far", 3);
 
             Assert.AreEqual(true, result5);
             Assert.AreEqual("far", stringToCheck);
 
             stringToCheck = @"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29";
-            bool? result6 = sanitizer.AllowedList.Unicode.Matches(ref stringToCheck, @"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29", 250);
+            bool? result6 = sanitizer.AllowedList.Unicode.EqualsValue(ref stringToCheck, @"\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29", 250);
 
             Assert.AreEqual(true, result6);
 
@@ -251,15 +251,39 @@ namespace ModestSanitizerUnitTests
             Assert.AreNotEqual("\x6a\x61\x76\x61\x73\x63\x72\x69\x70\x74\x3a\x61\x6c\x65\x72\x74\x281337\x29", stringToCheck);
 
             stringToCheck = "Delta Δ and Pi(\u03a0) and Sigma(\u03a3)"; //Δ  is Delta capital letter. δ is Delta lower case letter. Equal when ignore case.
-            bool? result7 = sanitizer.AllowedList.Unicode.MatchesIgnoreCase(ref stringToCheck, "Delta δ and Pi(\u03a0) and Sigma(\u03a3)", 250);
+            bool? result7 = sanitizer.AllowedList.Unicode.EqualsValueIgnoreCase(ref stringToCheck, "Delta δ and Pi(\u03a0) and Sigma(\u03a3)", 250);
 
             Assert.AreEqual(true, result7);
             //NOTE: stringToCheck reverts to the AllowList version in terms of case. This is to favor the expected case.            
             Assert.AreEqual("Delta δ and Pi(\u03a0) and Sigma(\u03a3)", stringToCheck);
 
-            //TODO: Test further variances
-            //string s1 = "He said, \"This is the last \u0063hance\x0021\"";
-            //string s2 = @"He said, ""This is the last \u0063hance\x0021""";
+            //.NET recognizes the C - \u0063 and the exclamation point \x0021 as Unicode characters here. Successfuly converts to ASCII.
+            string stringToCheckSuffix = "He said, \"This is the last \u0063hance\x0021\"";
+            bool? resultSuffix = sanitizer.AllowedList.ASCII.EndsWithSuffix(ref stringToCheckSuffix, "\u0063hance\x0021\"", 46);
+
+            Assert.AreEqual(true, resultSuffix);
+            Assert.AreEqual("He said, \"This is the last \u0063hance\x0021\"", stringToCheckSuffix);
+
+            //Due to the verbatim @ symbol, .NET fails to recognize the C - \u0063 and the exclamation point \x0021 as Unicode characters here.
+            //However, since we use the Unicode version of the method and there is no attempt to convert to ASCII, this works fine.
+            string stringToCheckSuffix2 = @"He said, ""This is the last \u0063haNce\x0021""";
+            bool? resultSuffix2 = sanitizer.AllowedList.Unicode.EndsWithSuffixIgnoreCase(ref stringToCheckSuffix2, @"\u0063hAnCe\x0021""", 50);
+
+            Assert.AreEqual(true, resultSuffix2);
+            Assert.AreEqual(@"He said, ""This is the last \u0063haNce\x0021""", stringToCheckSuffix2);
+
+            string stringToCheckPrefix = "HelloWorld";
+            bool? resultPrefix = sanitizer.AllowedList.ASCII.StartsWithPrefix(ref stringToCheckPrefix, "Hello", 7);
+
+            Assert.AreEqual(true, resultPrefix);
+            Assert.AreEqual("HelloWo", stringToCheckPrefix); //truncated to 7 characters. Prefix was met even after truncating.
+
+            string stringToCheckPrefix2 = @"hEllo WORld";
+            bool? resultPrefix2 = sanitizer.AllowedList.Unicode.StartsWithPrefixIgnoreCase(ref stringToCheckPrefix2, @"Hello World", 50);
+
+            Assert.AreEqual(true, resultPrefix2);
+            Assert.AreEqual(@"hEllo WORld", stringToCheckPrefix2);
+
             sanitizer.ClearSaniExceptions();
         }
 
@@ -386,7 +410,7 @@ namespace ModestSanitizerUnitTests
 
             String resultStrEmpty = sanitizer.Truncate.ToValidLength(String.Empty, 50);
 
-            Assert.AreEqual(String.Empty, resultStrEmpty);
+            Assert.AreEqual(null, resultStrEmpty);
 
             sanitizer.ClearSaniExceptions();
         }

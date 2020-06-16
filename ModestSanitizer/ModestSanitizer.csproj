@@ -35,6 +35,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ISaniCore.cs" />
     <Compile Include="RestrictedList.cs" />
     <Compile Include="Regex\DateRegex.cs" />
     <Compile Include="DateUtil.cs" />

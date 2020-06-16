@@ -43,7 +43,7 @@ namespace ModestSanitizer
 
                 if (string.IsNullOrWhiteSpace(strToClean))
                 {
-                    tmpResult = strToClean;
+                    tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                 }
                 else
                 {
@@ -81,7 +81,7 @@ namespace ModestSanitizer
 
                 if (string.IsNullOrWhiteSpace(strToClean))
                 {
-                    tmpResult = strToClean;
+                    tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                 }
                 else
                 {
@@ -167,7 +167,7 @@ namespace ModestSanitizer
             {
                 if (string.IsNullOrWhiteSpace(strToClean))
                 {
-                    tmpResult = strToClean;
+                    tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                 }
                 else
                 {
@@ -209,7 +209,7 @@ namespace ModestSanitizer
 
                 if (string.IsNullOrWhiteSpace(strToClean))
                 {
-                    tmpResult = strToClean;
+                    tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                 }
                 else
                 {

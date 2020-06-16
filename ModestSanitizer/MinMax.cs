@@ -70,7 +70,7 @@ namespace ModestSanitizer
                 {
                     if (String.IsNullOrWhiteSpace(longToClean))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
@@ -151,7 +151,7 @@ namespace ModestSanitizer
                 {
                     if (String.IsNullOrWhiteSpace(decimalToClean))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
@@ -383,7 +383,7 @@ namespace ModestSanitizer
                 {
                     if (String.IsNullOrWhiteSpace(intToClean))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
@@ -455,7 +455,7 @@ namespace ModestSanitizer
                 {
                     if (String.IsNullOrWhiteSpace(boolToClean))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
@@ -564,7 +564,7 @@ namespace ModestSanitizer
                 {
                     if (String.IsNullOrWhiteSpace(dateToClean))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {

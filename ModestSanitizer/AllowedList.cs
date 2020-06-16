@@ -51,55 +51,203 @@ namespace ModestSanitizer
             }
 
             /// <summary>
-            /// Matches - compare string to check against allowedList value. Sets stringToCheck to allowedList value if equivalent.
+            /// StartsWithPrefix - compare string to check against allowedList value at the start of the string.
             /// </summary>
             /// <param name="stringToCheck"></param>
             /// <returns></returns>   
-            public bool? Matches(ref string stringToCheck, string allowedListValue, int lengthToTruncateTo)
+            public bool? StartsWithPrefix(ref string stringToCheck, string allowedListPrefix, int lengthToTruncateTo)
             {
                 bool? tmpResult = false;
 
                 try
                 {
-                    if (String.IsNullOrWhiteSpace(allowedListValue))
+                    if (String.IsNullOrWhiteSpace(allowedListPrefix))
                     {
-                        throw new Exception("AllowedList value cannot be null or empty!");
+                        throw new Exception("AllowedList prefix cannot be null or empty!");
                     }
 
                     if (String.IsNullOrWhiteSpace(stringToCheck))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
-                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(stringToCheck);
-                        string truncatedValue = SaniCore.Truncate.ToValidLength(limitedToASCII, lengthToTruncateTo);
-                        bool isSuccess = (truncatedValue.Equals(allowedListValue));
+                        StringComparison ord = StringComparison.Ordinal;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+                       
+                        bool isSuccess = (limitedToASCII.StartsWith(allowedListPrefix, ord));
 
                         if (isSuccess)
                         {
-                            stringToCheck = allowedListValue;
+                            stringToCheck = limitedToASCII;
                             tmpResult = true;
                         }
                         else
                         {
-                            throw new Exception("StringToCheck does NOT match allowedList value.");
+                            throw new Exception("StringToCheck does NOT start with the allowedList prefix.");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList ASCII Matches method", stringToCheck, ex);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList ASCII StartsWithPrefix method", stringToCheck, ex);
                 }
                 return tmpResult;
             }
 
             /// <summary>
-            /// MatchesIgnoreCase - compare string to check against allowedList value while ignoring case sensitivity. Sets stringToCheck to allowedList value (including case) if matched.
+            /// EndsWithSuffix - compare string to check against allowedList value at the end of the string.
             /// </summary>
             /// <param name="stringToCheck"></param>
             /// <returns></returns>   
-            public bool? MatchesIgnoreCase(ref string stringToCheck, string allowedListValue, int lengthToTruncateTo)
+            public bool? EndsWithSuffix(ref string stringToCheck, string allowedListSuffix, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(allowedListSuffix))
+                    {
+                        throw new Exception("AllowedList Suffix cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        StringComparison ord = StringComparison.Ordinal;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+
+                        bool isSuccess = (limitedToASCII.EndsWith(allowedListSuffix, ord));
+
+                        if (isSuccess)
+                        {
+                            stringToCheck = limitedToASCII;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT end with the allowedList Suffix.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList ASCII EndsWithSuffix method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
+
+            /// <summary>
+            /// StartsWithPrefixIgnoreCase - compare string to check against allowedList value at the start of the string ignoring case.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? StartsWithPrefixIgnoreCase(ref string stringToCheck, string allowedListPrefix, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(allowedListPrefix))
+                    {
+                        throw new Exception("AllowedList prefix cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+
+                        bool isSuccess = (limitedToASCII.StartsWith(allowedListPrefix, ic));
+
+                        if (isSuccess)
+                        {
+                            stringToCheck = limitedToASCII;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT start with the allowedList prefix while ignoring case.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList ASCII StartsWithPrefixIgnoreCase method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
+
+            /// <summary>
+            /// EndsWithSuffixIgnoreCase - compare string to check against allowedList value at the end of the string ignoring case.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? EndsWithSuffixIgnoreCase(ref string stringToCheck, string allowedListSuffix, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(allowedListSuffix))
+                    {
+                        throw new Exception("AllowedList Suffix cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+
+                        bool isSuccess = (limitedToASCII.EndsWith(allowedListSuffix, ic));
+
+                        if (isSuccess)
+                        {
+                            stringToCheck = limitedToASCII;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT start with the allowedList Suffix while ignoring case.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList ASCII EndsWithSuffixIgnoreCase method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
+
+            /// <summary>
+            /// EqualsValue - compare string to check against allowedList value. Sets stringToCheck to allowedList value if equivalent.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? EqualsValue(ref string stringToCheck, string allowedListValue, int lengthToTruncateTo)
             {
                 bool? tmpResult = false;
 
@@ -112,19 +260,15 @@ namespace ModestSanitizer
 
                     if (String.IsNullOrWhiteSpace(stringToCheck))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
                         string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
                         string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
-                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
-
-                        int initialLength = limitedToASCII.Length;
-                        string stringPostReplacement = Replace(limitedToASCII, allowedListValue, string.Empty, ic);
-                        int finalLength = stringPostReplacement.Length;
-
-                        bool isSuccess = (finalLength == 0);
+                        
+                        bool isSuccess = (limitedToASCII.Equals(allowedListValue));
 
                         if (isSuccess)
                         {
@@ -133,13 +277,61 @@ namespace ModestSanitizer
                         }
                         else
                         {
-                            throw new Exception("StringToCheck does NOT match allowedList value.");
+                            throw new Exception("StringToCheck does NOT equal allowedList value.");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList ASCII MatchesIgnoreCase method", stringToCheck, ex);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList ASCII EqualsValue method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
+
+            /// <summary>
+            /// EqualsValueIgnoreCase - compare string to check against allowedList value while ignoring case sensitivity. Sets stringToCheck to allowedList value (including case) if equivalent.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? EqualsValueIgnoreCase(ref string stringToCheck, string allowedListValue, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(allowedListValue))
+                    {
+                        throw new Exception("AllowedList value cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+
+                        bool isSuccess = limitedToASCII.Equals(allowedListValue, ic);
+
+                        if (isSuccess)
+                        {
+                            stringToCheck = allowedListValue;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT equal allowedList value.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList ASCII EqualsValueIgnoreCase method", stringToCheck, ex);
                 }
                 return tmpResult;
             }
@@ -161,11 +353,203 @@ namespace ModestSanitizer
             }
 
             /// <summary>
-            /// Matches - compare string to check against allowedList value. Sets stringToCheck to allowedList value if equivalent.
+            /// StartsWithPrefix - compare string to check against allowedList value at the start of the string.
             /// </summary>
             /// <param name="stringToCheck"></param>
             /// <returns></returns>   
-            public bool? Matches(ref string stringToCheck, string allowedListValue, int lengthToTruncateTo)
+            public bool? StartsWithPrefix(ref string stringToCheck, string allowedListPrefix, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(allowedListPrefix))
+                    {
+                        throw new Exception("AllowedList prefix cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        StringComparison ord = StringComparison.Ordinal;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string normalizedUnicode = SaniCore.NormalizeOrLimit.NormalizeUnicode(truncatedValue);
+
+                        bool isSuccess = (normalizedUnicode.StartsWith(allowedListPrefix, ord));
+
+                        if (isSuccess)
+                        {
+                            stringToCheck = normalizedUnicode;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT start with the allowedList prefix normalized.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Normalize StartsWithPrefix method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
+
+            /// <summary>
+            /// EndsWithSuffix - compare string to check against allowedList value at the end of the string.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? EndsWithSuffix(ref string stringToCheck, string allowedListSuffix, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(allowedListSuffix))
+                    {
+                        throw new Exception("AllowedList Suffix cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        StringComparison ord = StringComparison.Ordinal;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string normalizedUnicode = SaniCore.NormalizeOrLimit.NormalizeUnicode(truncatedValue);
+
+                        bool isSuccess = (normalizedUnicode.EndsWith(allowedListSuffix, ord));
+
+                        if (isSuccess)
+                        {
+                            stringToCheck = normalizedUnicode;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT end with the allowedList Suffix normalized.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Normalize EndsWithSuffix method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
+
+            /// <summary>
+            /// StartsWithPrefixIgnoreCase - compare string to check against allowedList value at the start of the string ignoring case.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? StartsWithPrefixIgnoreCase(ref string stringToCheck, string allowedListPrefix, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(allowedListPrefix))
+                    {
+                        throw new Exception("AllowedList prefix cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string normalizedUnicode = SaniCore.NormalizeOrLimit.NormalizeUnicode(truncatedValue);
+
+                        bool isSuccess = (normalizedUnicode.StartsWith(allowedListPrefix, ic));
+
+                        if (isSuccess)
+                        {
+                            stringToCheck = normalizedUnicode;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT start with the allowedList Prefix normalized while ignoring case.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Normalize StartsWithPrefixIgnoreCase method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
+
+            /// <summary>
+            /// EndsWithSuffixIgnoreCase - compare string to check against allowedList value at the end of the string ignoring case.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? EndsWithSuffixIgnoreCase(ref string stringToCheck, string allowedListSuffix, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(allowedListSuffix))
+                    {
+                        throw new Exception("AllowedList Suffix cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string normalizedUnicode = SaniCore.NormalizeOrLimit.NormalizeUnicode(truncatedValue);
+
+                        bool isSuccess = (normalizedUnicode.EndsWith(allowedListSuffix, ic));
+
+                        if (isSuccess)
+                        {
+                            stringToCheck = normalizedUnicode;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT start with the allowedList Suffix Normalize while ignoring case.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Normalize EndsWithSuffixIgnoreCase method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
+
+            /// <summary>
+            /// EqualsValue - compare string to check against allowedList value. Sets stringToCheck to allowedList value if equivalent.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? EqualsValue(ref string stringToCheck, string allowedListValue, int lengthToTruncateTo)
             {
                 bool? tmpResult = false;
 
@@ -178,13 +562,15 @@ namespace ModestSanitizer
 
                     if (String.IsNullOrWhiteSpace(stringToCheck))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
-                        string normalizedUnicode = SaniCore.NormalizeOrLimit.NormalizeUnicode(stringToCheck);
-                        string truncatedValue = SaniCore.Truncate.ToValidLength(normalizedUnicode, lengthToTruncateTo);
-                        bool isSuccess = (truncatedValue.Equals(allowedListValue));
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string normalizedUnicode = SaniCore.NormalizeOrLimit.NormalizeUnicode(truncatedValue);
+                       
+                        bool isSuccess = (normalizedUnicode.Equals(allowedListValue));
 
                         if (isSuccess)
                         {
@@ -193,23 +579,23 @@ namespace ModestSanitizer
                         }
                         else
                         {
-                            throw new Exception("StringToCheck does NOT match allowedList value.");
+                            throw new Exception("StringToCheck does NOT equal allowedList value.");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Unicode Matches method", stringToCheck, ex);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Unicode EqualsValue method", stringToCheck, ex);
                 }
                 return tmpResult;
             }
 
             /// <summary>
-            /// MatchesIgnoreCase - compare string to check against allowedList value while ignoring case sensitivity. Sets stringToCheck to allowedList value (including case) if matched.
+            /// EqualsValueIgnoreCase - compare string to check against allowedList value while ignoring case sensitivity. Sets stringToCheck to allowedList value (including case) if equivalent.
             /// </summary>
             /// <param name="stringToCheck"></param>
             /// <returns></returns>   
-            public bool? MatchesIgnoreCase(ref string stringToCheck, string allowedListValue, int lengthToTruncateTo)
+            public bool? EqualsValueIgnoreCase(ref string stringToCheck, string allowedListValue, int lengthToTruncateTo)
             {
                 bool? tmpResult = false;
 
@@ -222,13 +608,16 @@ namespace ModestSanitizer
 
                     if (String.IsNullOrWhiteSpace(stringToCheck))
                     {
-                        tmpResult = null;
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
+                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
+
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
                         string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
                         string normalizedUnicode = SaniCore.NormalizeOrLimit.NormalizeUnicode(truncatedValue);
-                        StringComparison ic = StringComparison.OrdinalIgnoreCase;
+                        
                         bool isSuccess = (normalizedUnicode.Equals(allowedListValue, ic));
 
                         if (isSuccess)
@@ -238,18 +627,19 @@ namespace ModestSanitizer
                         }
                         else
                         {
-                            throw new Exception("StringToCheck does NOT match allowedList value.");
+                            throw new Exception("StringToCheck does NOT equal allowedList value.");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Unicode MatchesIgnoreCase method", stringToCheck, ex);
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Unicode EqualsIgnoreCase method", stringToCheck, ex);
                 }
                 return tmpResult;
             }
         }
 
+        //StartsWith, EndsWith and maybe an ApplyRegex
         //TODO: partial allowedList such as the domain of an email address? ^[a-zA-Z0-9_+&*-]+(?:\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,7}$
 
         //SOURCE: https://stackoverflow.com/questions/6275980/string-replace-ignoring-case

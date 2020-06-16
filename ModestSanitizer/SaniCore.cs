@@ -7,7 +7,7 @@ using static ModestSanitizer.Sanitizer;
 
 namespace ModestSanitizer
 {
-    public class SaniCore
+    public class SaniCore : ISaniCore
     {
         public enum Approach
         {
@@ -27,7 +27,7 @@ namespace ModestSanitizer
 
         public Approach SanitizerApproach { get; set; }
         public Dictionary<Guid, KeyValuePair<SaniTypes, string>> SaniExceptions { get; set; }
-        
+
         public SaniCore() { }
 
     }//end of class
