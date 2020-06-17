@@ -67,6 +67,7 @@ namespace ConsoleApp1
                 {
                     //These are the three arg value passed-in in this example: "\myReport" "06/10/2020" 1000000.00
 
+                    //Step Zero: CHECK FOR NULLS
                     if ( args[0] == null || args[1] == null || args[2] == null)
                     {
                         throw new ArgumentNullException("Args cannot be null!");
@@ -77,25 +78,27 @@ namespace ConsoleApp1
                     dateResult = sanitizerReviewOnly.Truncate.ToValidLength(args[1], 10);
                     decimalResult = sanitizerReviewOnly.Truncate.ToValidLength(args[2], 7);
 
-                    //Step Two: RESTRICTEDLIST.
+                    //Step Two: RESTRICTEDLIST. 
                     bool checkForHexChars = true;
                     bool checkForCommonMaliciousChars = true;
 
-                    //ModestSanitizer doesn't automatically disallow Forward Slash and Tilde since valid FilePaths may contain these.
-                    //However, if you aren't passing a FilePath then it may make sense to add these to your own RestrictedList as shown here.
-                    List<string> RestrictedListForwardSlashAndTilde = new List<string>() { "\\", "~" };
+                    //ModestSanitizer doesn't automatically disallow Backslash and Tilde since valid FilePaths may contain these.
+                    //However, if you aren't passing a FilePath then it may make sense to add these to your own restrictedList as shown here.
+                    List<string> restrictedListBackslashAndTilde = new List<string>() { "\\", "~" };
 
-                    if ((bool)sanitizerReviewOnly.RestrictedList.ReviewIgnoreCaseUsingASCII(ref result1, RestrictedListForwardSlashAndTilde, 10, 
+                    if ((bool)sanitizerReviewOnly.RestrictedList.ASCII.ReviewIgnoreCase(ref result1, restrictedListBackslashAndTilde, 10, 
                         checkForHexChars, checkForCommonMaliciousChars))
                     {
-                        //Log the reviewed value (cleansed) that had RestrictedList substrings found (and removed) and notify IT security.
-                        Console.WriteLine("RestrictedList matched! Notify IT security. Value: " + result1);
+                        //Log the reviewed value (cleansed) that had restrictedList substrings found (and removed) and notify IT security.
+                        //The restricted character found was the backslash identified above. 
+                        //This has been cleansed from result1. Malicious chars should NOT be written to a log. (Harder to investigate but safer.)
+                        Console.WriteLine("RestrictedList value found! Notify IT security. String reviewed: " + result1);
                     }
                     else
                     {
-                        Console.WriteLine("RestrictedList values not found. Proceed. Value: " + result1);
+                        Console.WriteLine("RestrictedList values not found. Proceed. String reviewed: " + result1);
                     }
-                    sanitizerReviewOnly.ClearSaniExceptions(); //Since some values are stored in the exception list, it is a good idea to clear it.
+                    sanitizerReviewOnly.ClearSaniExceptions(); //Since some values are stored in the exception list, clear it.
 
                     //Now let's switch to throwing exceptions instead of merely logging them . . .
                     Sanitizer sanitizer = new Sanitizer(SaniCore.Approach.ThrowExceptions, false);
@@ -111,10 +114,10 @@ namespace ConsoleApp1
                     cleanResult1 = sanitizer.NormalizeOrLimit.ToASCIIOnly(result1);
 
                     //Step Five: ALLOWED LIST.
-                    //AllowedList performs the NormalizeOrLimit.ToASCIIOnly too. Explicitly call this above just for clarity.
-                    if ((bool)sanitizer.AllowedList.ASCII.Matches(ref cleanResult1, "myReport", 10)) //truncates again too.
+                    //AllowedList performs the NormalizeOrLimit.ToASCIIOnly too. Explicitly call this above just for clarity.
+                    if ((bool)sanitizer.AllowedList.ASCII.EqualsValue(ref cleanResult1, "myReport", 10)) //truncates again too.
                     {
-                        Console.WriteLine("AllowedList matched! Value: " + cleanResult1);
+                        Console.WriteLine("AllowedList equals expected value! Value: " + cleanResult1);
                     }
                     else
                     {
@@ -127,18 +130,21 @@ namespace ConsoleApp1
                 }
 
                 //Proceed with cleansed data . . .
+                Console.WriteLine("\n************************************************\n");
                 Console.WriteLine(cleanResult1 + " is the report identified to run.");
                 Console.WriteLine(cleanDateResult.ToString() + " is the date to run the report for.");
                 System.Globalization.CultureInfo enUS = System.Globalization.CultureInfo.GetCultureInfo("en-US");
                 Console.WriteLine(((decimal)cleanDecimalResult).ToString("C2", enUS) + " is the preferred dollar amount.");
 
-                //if (System.Diagnostics.Debugger.IsAttached) 
-                Console.ReadLine();
+                //if (System.Diagnostics.Debugger.IsAttached) 
+                Console.ReadLine();
             }
         }
     }
 }
 ```
+
+Please review the Unit Tests included in the open-source code for a full set of examples.
 
 Always try to look for loopholes in terms of your Allowed List or Regex. 
 
@@ -150,7 +156,7 @@ The ModestSanitizer is designed to sanitize input strings in multiple steps. (NO
 
 * :star: **Step Zero:  CHECK FOR NULLS.** A pre-requisite step (or step zero) may be to check the strings that you are going to review and cleanse for nulls, empty strings, or whitespace. Handle these situations appropriately for your application. If given a null, empty string, or whitespace to process, ModestSanitizer will typically just return null rather than track or throw an exception (except in the case of FileNameCleanse since a null would always be an invalid filename. An exception will be thrown in this case.) 
 
-* :star: **Step One:  TRUNCATE.** The first step is to truncate to a predefined character limit. The developer should also check for NULL values or empty strings at this point since Modest Sanitizer will typically just return null if a null or whitespace is passed in.
+* :star: **Step One:  TRUNCATE.** The first step is to truncate to a predefined character limit. This may prevent any malicious actor passing in a gigabyte-length string to slow down the sanitization process or the application itself.
 
 * :star: **Step Two: RESTRICTED LIST.** The second step is to review (and log/alert on) the input strings against any appropriate Restricted Lists. This step should likely be set to TrackExceptionsInList only so as not to automatically stop the program if a malicious string is found (but only optionally based on developer discretion.) This is primarily a monitoring and cleansing step. The following steps would likely be a more appropriate place to perform a full stop if an exception is found. The returned string will be cleansed of RestrictedList tokens and available by ref.
 
@@ -177,7 +183,7 @@ NOTE: This is NOT meant to replace (but merely to supplement) formal input valid
 **Why?** To assist with monitoring, tracking, and cleansing of potentially malicious input
 6. Truncate input strings to a valid max length.
 **Why?** To protect against malicious hackers passing-in gigabyte-length strings which could potentially slow down the sanitizing process or the application itself.
-7. Check for Hexadecimal characters to protect against format string attacks if using the unsafe keyword (e.g., if marshaling data to unmanaged memory): https://owasp.org/www-community/attacks/Format_string_attack
+7. Check for Hexadecimal characters (and other common potentially malicious characters.) **Why?** To protect against format string attacks if using the unsafe keyword (e.g., if marshaling data to unmanaged memory): https://owasp.org/www-community/attacks/Format_string_attack
 
 ModestSanitizer is NOT meant to replace or compete with a full-blown, mature, robust **runtime application self-protection (RASP)** library or tool, see here:
 [https://en.wikipedia.org/wiki/Application_security](https://en.wikipedia.org/wiki/Application_security)
