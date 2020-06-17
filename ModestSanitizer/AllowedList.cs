@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using static ModestSanitizer.Sanitizer;
 
@@ -48,6 +49,64 @@ namespace ModestSanitizer
 
                 TruncateLength = 10;
                 SaniType = SaniTypes.AllowedList;
+            }
+
+            /// <summary>
+            /// MatchesRegex - case-sensitive, single-line Regex match against string to check using regexToMatch expression after truncating stringToCheck and limiting to ASCII. If it matches, stringToCheck ref will be set to the truncated value and limited to ASCII.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? MatchesRegex(ref string stringToCheck, string regexToMatch, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(regexToMatch))
+                    {
+                        throw new Exception("AllowedRegex cannot be null or empty!");
+                    }
+
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+
+                        //This regex will ALLOW valid expressions based on a matching Regex.
+                        string regex2 = regexToMatch;
+
+                        bool matchOnWindows = false;
+                        if (SaniCore.CompileRegex)
+                        {
+                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
+                            matchOnWindows = Regex.IsMatch(limitedToASCII, regex2, RegexOptions.Singleline | RegexOptions.Compiled);
+                        }
+                        else
+                        {
+                            matchOnWindows = Regex.IsMatch(limitedToASCII, regex2, RegexOptions.Singleline);
+                        }
+
+                        if (matchOnWindows)
+                        {
+                            stringToCheck = limitedToASCII;
+                            tmpResult = true;
+                        }
+                        else
+                        {
+                            throw new Exception("StringToCheck does NOT match Allowed Regex.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "AllowedList: ", "Issue with AllowedList Matches Regex method", stringToCheck, ex);
+                }
+                return tmpResult;
             }
 
             /// <summary>

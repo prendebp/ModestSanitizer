@@ -235,6 +235,23 @@ namespace ModestSanitizerUnitTests
             Assert.AreEqual(true, result4);
             Assert.AreEqual("far", stringToCheck);
 
+            wasExceptionThrown = false;
+
+            string stringToCheckRegex = @"<SCRIPT>®";
+            string allowedRegex = @"^[0-9a-zA-Z]*$"; //match numbers 0-9 and alpha chars. Angled brackets will fail to match so throw exception!
+            try
+            {
+                //This will first limit the stringToCheckRegex to ASCII characters and only then try to match to the Regex.
+                bool? resultRegex = sanitizer.AllowedList.ASCII.MatchesRegex(ref stringToCheckRegex, allowedRegex, 225);
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
+           
             stringToCheck = "faRside";
             bool? result5 = sanitizer.AllowedList.ASCII.EqualsValueIgnoreCase(ref stringToCheck, "far", 3);
 
@@ -384,6 +401,23 @@ namespace ModestSanitizerUnitTests
             Assert.AreEqual("StringToCheck contains a common malicious character and a restrictedList value.", innerExceptionMsg);
 
             Assert.AreEqual(@"myURL.biz", stringWithNullByteAgain);//clears common malicious characters %p and %00 plus restrictedList value \\c this time
+
+            wasExceptionThrown = false;
+
+            string stringToCheckRegex = "\uFE64" + "script" + "\uFE65";
+            string disallowedRegex = @"[<>]"; //match any Angled brackets as restricted/disallowed chars. Will match so throw exception!
+            try
+            {
+                //This will first limit the stringToCheckRegex to ASCII characters and only then try to match to the Regex.
+                bool? resultRegex = sanitizer.RestrictedList.ReviewRegexUsingASCII(ref stringToCheckRegex, disallowedRegex, 225);
+            }
+            catch (SanitizerException se)
+            {
+                wasExceptionThrown = true;
+                innerExceptionMsg = se.InnerException.Message;
+            }
+
+            Assert.AreEqual(true, wasExceptionThrown);
 
             sanitizer.ClearSaniExceptions();
         }
