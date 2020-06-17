@@ -28,13 +28,17 @@ namespace ModestSanitizer
 
         private int TruncateLength { get; set; }
         private SaniTypes SaniType { get; set; }
-        
+
+        public UsingASCII ASCII { get; set; }
+
         public RestrictedList(SaniCore saniCore)
         {
             SaniCore = saniCore;
 
             TruncateLength = 10;
             SaniType = SaniTypes.RestrictedList;
+
+            ASCII = new UsingASCII(saniCore);
         }
 
         //Why check for Hexadecimal? 
@@ -102,6 +106,7 @@ namespace ModestSanitizer
 
             return hexRestrictedList;
         }
+
         public static List<string> GenerateCommonRestrictedList()
         {
             //NOTE: @"\ resolves to this \\. Without the asterisk "\ will resolve to \. So, we will duplicate to check both ways.
@@ -148,198 +153,214 @@ namespace ModestSanitizer
         }
 
         //TODO: Fill-in new methods here for restrictedList of OS Commands or SQL Injection keywords?
-        /// <summary>
-        /// Review - compare string to check against restrictedList value while ignoring case. Returns true if any issue or restrictedList match found. stringToCheck will be cleansed.
-        /// </summary>
-        /// <param name="stringToCheck"></param>
-        /// <returns></returns>   
-        public bool? ReviewIgnoreCaseUsingASCII(ref string stringToCheck, List<string> restrictedListValues, int lengthToTruncateTo, bool checkForHexChars = true, bool checkForCommonMaliciousChars = true)
+
+        public class UsingASCII
         {
-            bool? tmpResult = false;
-            StringComparison ic = StringComparison.InvariantCultureIgnoreCase;//be more inclusive for restrictedList
-            bool hasCommonMaliciousChars = false;
-            bool hasOtherMaliciousChars = false;
+            private SaniCore SaniCore { get; set; }
 
-            try
+            private int TruncateLength { get; set; }
+            private SaniTypes SaniType { get; set; }
+
+            public UsingASCII(SaniCore saniCore)
             {
-                if (restrictedListValues == null || restrictedListValues.Count == 0)
-                {
-                    tmpResult = true;
-                    throw new Exception("RestrictedList value cannot be null or empty list!");
-                }  
+                SaniCore = saniCore;
 
-                if (String.IsNullOrWhiteSpace(stringToCheck))
+                TruncateLength = 10;
+                SaniType = SaniTypes.RestrictedList;
+            }
+
+            /// <summary>
+            /// Review - compare string to check against restrictedList value while ignoring case. Returns true if any issue or restrictedList match found. Ref stringToCheck will be cleansed.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? ReviewIgnoreCase(ref string stringToCheck, List<string> restrictedListValues, int lengthToTruncateTo, bool checkForHexChars = true, bool checkForCommonMaliciousChars = true)
+            {
+                bool? tmpResult = false;
+                StringComparison ic = StringComparison.InvariantCultureIgnoreCase;//be more inclusive for restrictedList
+                bool hasCommonMaliciousChars = false;
+                bool hasOtherMaliciousChars = false;
+
+                try
                 {
-                    tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
-                }
-                else
-                {
-                    if (checkForCommonMaliciousChars == true)
+                    if (restrictedListValues == null || restrictedListValues.Count == 0)
                     {
-                        //Review in Unicode instead of ASCII for this case since the common malicious characters are listed mostly in unicode chars
-                        
-                        string truncatedString = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
-                        string normalizedString = SaniCore.NormalizeOrLimit.NormalizeUnicode(truncatedString);
+                        tmpResult = true;
+                        throw new Exception("RestrictedList value cannot be null or empty list!");
+                    }
 
-                        int initialLengthStr = normalizedString.Length;
-                        string strPostReplacement = String.Empty;
-                        
-                        bool firstPass = true;
-
-                        foreach (string badVal in GenerateCommonRestrictedList())
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
+                    {
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
+                    }
+                    else
+                    {
+                        if (checkForCommonMaliciousChars == true)
                         {
-                            if (firstPass == true)
+                            //Review in Unicode instead of ASCII for this case since the common malicious characters are listed mostly in unicode chars
+
+                            string truncatedString = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                            string normalizedString = SaniCore.NormalizeOrLimit.NormalizeUnicode(truncatedString);
+
+                            int initialLengthStr = normalizedString.Length;
+                            string strPostReplacement = String.Empty;
+
+                            bool firstPass = true;
+
+                            foreach (string badVal in GenerateCommonRestrictedList())
                             {
-                                strPostReplacement = Replace(normalizedString, badVal, string.Empty, ic);
-                                firstPass = false;
+                                if (firstPass == true)
+                                {
+                                    strPostReplacement = Replace(normalizedString, badVal, string.Empty, ic);
+                                    firstPass = false;
+                                }
+                                else
+                                {
+                                    strPostReplacement = Replace(strPostReplacement, badVal, string.Empty, ic);
+                                }
+
+                                if (strPostReplacement.Length < initialLengthStr) //new length will be shorter since restrictedList chars replaced
+                                {
+                                    hasCommonMaliciousChars = true;
+                                }
+                            }
+
+                            if (hasCommonMaliciousChars)
+                            {
+                                tmpResult = true;
+                                stringToCheck = strPostReplacement;
+
+                                //FIRE THIS LATER: throw new Exception("StringToCheck contains a common malicious character.");
                             }
                             else
                             {
-                                strPostReplacement = Replace(strPostReplacement, badVal, string.Empty, ic);
-                            }
-
-                            if (strPostReplacement.Length < initialLengthStr) //new length will be shorter since restrictedList chars replaced
-                            {
-                                hasCommonMaliciousChars = true;
+                                tmpResult = false;
                             }
                         }
 
-                        if (hasCommonMaliciousChars)
+                        if (checkForHexChars == true)
+                        {
+                            List<string> hexRestrictedList = RestrictedList.GenerateHexAndEscapeSeqRestrictedList();
+
+                            //Check for hex values first before the developer - defined restrictedList to avoid tainting
+                            hexRestrictedList.AddRange(restrictedListValues); //Add restricted values to the end
+                            restrictedListValues = hexRestrictedList;
+                        }
+
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+
+                        int initialLength = limitedToASCII.Length;
+                        string stringPostReplacement = String.Empty;
+
+                        bool firstPassAgain = true;
+                        foreach (string badVal in restrictedListValues)
+                        {
+                            if (firstPassAgain == true)
+                            {
+                                stringPostReplacement = Replace(limitedToASCII, badVal, string.Empty, ic);
+                                firstPassAgain = false;
+                            }
+                            else
+                            {
+                                stringPostReplacement = Replace(stringPostReplacement, badVal, string.Empty, ic);
+                            }
+
+                            if (stringPostReplacement.Length < initialLength) //new length will be shorter since restrictedList chars replaced
+                            {
+                                hasOtherMaliciousChars = true;
+                            }
+                        }
+
+                        if (hasOtherMaliciousChars)
                         {
                             tmpResult = true;
-                            stringToCheck = strPostReplacement;
 
-                            //FIRE THIS LATER: throw new Exception("StringToCheck contains a common malicious character.");
+                            stringToCheck = stringPostReplacement;
+
+                            if (hasCommonMaliciousChars)
+                            {
+                                throw new Exception("StringToCheck contains a common malicious character and a restrictedList value.");
+                            }
+                            else
+                            {
+                                throw new Exception("StringToCheck contains a restrictedList value.");
+                            }
                         }
                         else
                         {
-                            tmpResult = false;
+                            if (hasCommonMaliciousChars)
+                            {
+                                throw new Exception("StringToCheck contains a common malicious character.");
+                            }
+
+                            //if once tmpResult has been set to true, do NOT un-set tmpResult to false
                         }
                     }
+                }
+                catch (Exception ex)
+                {
+                    tmpResult = true;
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "RestrictedList: ", "Issue with RestrictedList ReviewIgnoreCase method", stringToCheck, ex);
+                }
+                return tmpResult;
+            }
 
-                    if (checkForHexChars == true)
+            /// <summary>
+            /// ReviewRegex - case-insensitive, single-line Regex match against string to check using regexToMatch expression after truncating stringToCheck and limiting to ASCII. If it matches, bool? return value will be true and stringToCheck ref will be set to the truncated value and limited to ASCII.
+            /// </summary>
+            /// <param name="stringToCheck"></param>
+            /// <returns></returns>   
+            public bool? ReviewViaRegex(ref string stringToCheck, string regexToMatchToDisallow, int lengthToTruncateTo)
+            {
+                bool? tmpResult = false;
+
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(regexToMatchToDisallow))
                     {
-                        List<string> hexRestrictedList = RestrictedList.GenerateHexAndEscapeSeqRestrictedList();
-
-                        //Check for hex values first before the developer - defined restrictedList to avoid tainting
-                        hexRestrictedList.AddRange(restrictedListValues); //Add restricted values to the end
-                        restrictedListValues = hexRestrictedList;
+                        throw new Exception("RegexToMatchToDisallow cannot be null or empty!");
                     }
 
-                    string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
-                    string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
-                                       
-                    int initialLength = limitedToASCII.Length;
-                    string stringPostReplacement = String.Empty;
-
-                    bool firstPassAgain = true; 
-                    foreach (string badVal in restrictedListValues)
+                    if (String.IsNullOrWhiteSpace(stringToCheck))
                     {
-                        if (firstPassAgain == true)
-                        {
-                            stringPostReplacement = Replace(limitedToASCII, badVal, string.Empty, ic);
-                            firstPassAgain = false;
-                        }
-                        else
-                        {
-                            stringPostReplacement = Replace(stringPostReplacement, badVal, string.Empty, ic);
-                        }
-                        
-                        if (stringPostReplacement.Length < initialLength) //new length will be shorter since restrictedList chars replaced
-                        {
-                            hasOtherMaliciousChars = true;
-                        }
-                    }
-
-                    if (hasOtherMaliciousChars)
-                    {
-                        tmpResult = true;
-
-                        stringToCheck = stringPostReplacement;
-
-                        if (hasCommonMaliciousChars)
-                        {
-                            throw new Exception("StringToCheck contains a common malicious character and a restrictedList value.");
-                        }
-                        else
-                        {
-                            throw new Exception("StringToCheck contains a restrictedList value.");
-                        }
+                        tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
                     }
                     else
                     {
-                        if (hasCommonMaliciousChars)
+                        //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
+                        string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
+                        string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
+
+                        //This regex will ALLOW valid expressions based on a matching Regex.
+                        string regex2 = regexToMatchToDisallow;
+
+                        bool matchOnWindows = false;
+                        if (SaniCore.CompileRegex)
                         {
-                            throw new Exception("StringToCheck contains a common malicious character.");
+                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
+                            matchOnWindows = Regex.IsMatch(limitedToASCII, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.Compiled);
+                        }
+                        else
+                        {
+                            matchOnWindows = Regex.IsMatch(limitedToASCII, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline);
                         }
 
-                        //if once tmpResult has been set to true, do NOT un-set tmpResult to false
+                        if (matchOnWindows)
+                        {
+                            stringToCheck = limitedToASCII;
+                            tmpResult = true;
+
+                            throw new Exception("StringToCheck matches restricted RegexToMatchToDisallow.");
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                tmpResult = true;
-                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "RestrictedList: ", "Issue with RestrictedList ReviewIgnoreCase method", stringToCheck, ex);
-            }
-            return tmpResult;
-        }
-
-
-        /// <summary>
-        /// ReviewRegex - case-insensitive, single-line Regex match against string to check using regexToMatch expression after truncating stringToCheck and limiting to ASCII. If it matches, stringToCheck ref will be set to the truncated value and limited to ASCII.
-        /// </summary>
-        /// <param name="stringToCheck"></param>
-        /// <returns></returns>   
-        public bool? ReviewRegexUsingASCII(ref string stringToCheck, string regexToMatchToDisallow, int lengthToTruncateTo)
-        {
-            bool? tmpResult = false;
-
-            try
-            {
-                if (String.IsNullOrWhiteSpace(regexToMatchToDisallow))
+                catch (Exception ex)
                 {
-                    throw new Exception("RegexToMatchToDisallow cannot be null or empty!");
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "RestrictedList: ", "Issue with RestrictedList ReviewRegex method", stringToCheck, ex);
                 }
-
-                if (String.IsNullOrWhiteSpace(stringToCheck))
-                {
-                    tmpResult = null; //Always return null. Protects against a gigabyte of whitespace!!!
-                }
-                else
-                {
-                    //Truncate first to lean towards more conservative. Have to pass in string in FormKC format.
-                    string truncatedValue = SaniCore.Truncate.ToValidLength(stringToCheck, lengthToTruncateTo);
-                    string limitedToASCII = SaniCore.NormalizeOrLimit.ToASCIIOnly(truncatedValue);
-
-                    //This regex will ALLOW valid expressions based on a matching Regex.
-                    string regex2 = regexToMatchToDisallow;
-
-                    bool matchOnWindows = false;
-                    if (SaniCore.CompileRegex)
-                    {
-                        //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                        matchOnWindows = Regex.IsMatch(limitedToASCII, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline | RegexOptions.Compiled);
-                    }
-                    else
-                    {
-                        matchOnWindows = Regex.IsMatch(limitedToASCII, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline);
-                    }
-
-                    if (matchOnWindows)
-                    {
-                        stringToCheck = limitedToASCII;
-                        tmpResult = true;
-
-                        throw new Exception("StringToCheck matches restricted RegexToMatchToDisallow.");
-                    }
-                }
+                return tmpResult;
             }
-            catch (Exception ex)
-            {
-                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "RestrictedList: ", "Issue with RestrictedList ReviewRegex method", stringToCheck, ex);
-            }
-            return tmpResult;
         }
 
         //SOURCE: https://stackoverflow.com/questions/6275980/string-replace-ignoring-case

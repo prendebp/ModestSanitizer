@@ -4,7 +4,7 @@
 - For output encoding see Anti-XSS.
 - For LDAP encoding see Anti-XSS.
 
-**DISCLAIMER:** This library is opinionated in favor of en-US culture and ASCII-compatible characters. Support for international unicode character cleansing is limited. This is built with .NET 4.6.1 so as to be compatible with legacy .NET applications. (A newer version targeting C# 7 and .Netcore could be beneficial, leveraging Span T for better performance and Memory T for async support.)
+**DISCLAIMER:** This library is opinionated in favor of en-US culture and ASCII-compatible characters. Support for international unicode character cleansing is limited. This is built with .NET 4.6.1 so as to be compatible with legacy .NET applications. (A newer version targeting C# 7 and .Netcore could be beneficial, leveraging Span T for better performance and Memory T for async support.) Note that this library leverages code snippets from sources on the internet as annotated in the code (such as from stackoverflow.com.)
 
 **USE THIS TO:** sanitize the arguments passed in to a Console application, or string parameters in general, or sanitize the values read out of a configuration file, such as application settings or a connection string.
 
@@ -65,6 +65,8 @@ namespace ConsoleApp1
 
                 try
                 {
+                    //These are the three arg value passed-in in this example: "\myReport" "06/10/2020" 1000000.00
+
                     if ( args[0] == null || args[1] == null || args[2] == null)
                     {
                         throw new ArgumentNullException("Args cannot be null!");
@@ -144,9 +146,11 @@ Also, try to look for overlaps in your Restricted List. The order in which the s
 
 ## Usage Guidelines
 
-The ModestSanitizer is designed to sanitize input strings in multiple steps.
+The ModestSanitizer is designed to sanitize input strings in multiple steps. (NOTE: Some of these steps use the other steps internally so you don't necessarily need to have a line of code for each step.) 
 
-- :star: **Step One:  TRUNCATE.** The first step is to truncate to a predefined character limit. The developer should also check for NULL values or empty strings at this point since Modest Sanitizer will typically just return null if a null or whitespace is passed in.
+* :star: **Step Zero:  CHECK FOR NULLS.** A pre-requisite step (or step zero) may be to check the strings that you are going to review and cleanse for nulls, empty strings, or whitespace. Handle these situations appropriately for your application. If given a null, empty string, or whitespace to process, ModestSanitizer will typically just return null rather than track or throw an exception (except in the case of FileNameCleanse since a null would always be an invalid filename. An exception will be thrown in this case.) 
+
+* :star: **Step One:  TRUNCATE.** The first step is to truncate to a predefined character limit. The developer should also check for NULL values or empty strings at this point since Modest Sanitizer will typically just return null if a null or whitespace is passed in.
 
 * :star: **Step Two: RESTRICTED LIST.** The second step is to review (and log/alert on) the input strings against any appropriate Restricted Lists. This step should likely be set to TrackExceptionsInList only so as not to automatically stop the program if a malicious string is found (but only optionally based on developer discretion.) This is primarily a monitoring and cleansing step. The following steps would likely be a more appropriate place to perform a full stop if an exception is found. The returned string will be cleansed of RestrictedList tokens and available by ref.
 
@@ -173,6 +177,7 @@ NOTE: This is NOT meant to replace (but merely to supplement) formal input valid
 **Why?** To assist with monitoring, tracking, and cleansing of potentially malicious input
 6. Truncate input strings to a valid max length.
 **Why?** To protect against malicious hackers passing-in gigabyte-length strings which could potentially slow down the sanitizing process or the application itself.
+7. Check for Hexadecimal characters to protect against format string attacks if using the unsafe keyword (e.g., if marshaling data to unmanaged memory): https://owasp.org/www-community/attacks/Format_string_attack
 
 ModestSanitizer is NOT meant to replace or compete with a full-blown, mature, robust **runtime application self-protection (RASP)** library or tool, see here:
 [https://en.wikipedia.org/wiki/Application_security](https://en.wikipedia.org/wiki/Application_security)

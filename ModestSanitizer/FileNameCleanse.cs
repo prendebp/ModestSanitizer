@@ -21,133 +21,153 @@ namespace ModestSanitizer
         private int TruncateLength { get; set; }
         private SaniTypes SaniType { get; set; }
 
+        public UsingASCII ASCII { get; set; }
+
         public FileNameCleanse(SaniCore saniCore)
         {
             SaniCore = saniCore;
 
             TruncateLength = 15;
             SaniType = SaniTypes.FileNameCleanse;
+
+            ASCII = new UsingASCII(saniCore);
         }
 
-        /// <summary>
-        /// Sanitize FileName Via Regex.
-        /// SOURCE: https://stackoverflow.com/questions/11794144/regular-expression-for-valid-filename
-        /// SOURCE: https://stackoverflow.com/questions/6730009/validate-a-file-name-on-windows
-        /// SOURCE: https://stackoverflow.com/questions/62771/how-do-i-check-if-a-given-string-is-a-legal-valid-file-name-under-windows#62855
-        /// </summary>
-        /// <param name="strToClean"></param>
-        /// <returns></returns>   
-        public string SanitizeViaRegexUsingASCII(string filename, int maxLength, bool disallowMoreThanOneDot, string optionalWhiteListFileExtension, bool disallowExecutableExtensions, bool disallowWebExtensions, bool disallowOfficeMacroExtensions, bool disallowPDFFileExtensions, bool disallowMediaFileExtensions)
+        public class UsingASCII
         {
-            string tmpResult = String.Empty;
+            private SaniCore SaniCore { get; set; }
 
-            try
+            private int TruncateLength { get; set; }
+            private SaniTypes SaniType { get; set; }
+
+            public UsingASCII(SaniCore saniCore)
             {
-                if (string.IsNullOrWhiteSpace(filename))
-                {
-                    throw new Exception("Filename cannot be null or empty.");
-                }
-                else
-                {
-                    tmpResult = SaniCore.Truncate.ToValidLength(filename, maxLength);
+                SaniCore = saniCore;
 
-                    //check for malicious Unicode prior to normalizing and reducing to ASCII-like characters
-                    if (ContainsMaliciousCharacters(ref tmpResult))
-                    {
-                        throw new Exception("Filename contains potentially malicious characters.");
-                    }
-
-                    //normalize prior to checking for dot characters to prevent unicode characters similar to dot
-                    tmpResult = SaniCore.NormalizeOrLimit.ToASCIIOnly(tmpResult);
-
-                    //check for dot characters
-                    char dot = '.';
-                    int count = 0;
-                    foreach (char letter in tmpResult)
-                       if (letter == dot) count++;
-
-                    if (disallowMoreThanOneDot)
-                    {
-                        if (count > 1)
-                        {
-                            throw new Exception("Filename contains more than one dot character.");
-                        }
-                    }
-
-                    if (count == 0)
-                    {
-                        throw new Exception("Filename does NOT contain at least one dot character.");
-                    }
-
-                    //now apply the regex check after having already normalized the unicode string and reduced it to ASCII-like characters.
-                    //This regex will disallow invalid characters within a filename such as ? * : " < > ; | \ / and will not allow a trailing space or dot.
-                    string regex2 = @"^(?!^(PRN|AUX|CLOCK\$|NUL|CON|COM\d|LPT\d|\..*)(\..+)?$)[^\x00-\x1f\\?*:\""<>;|\/]+[^*\x00-\x1F\ .]$";
-
-                    bool matchOnWindows = false;
-                    if (SaniCore.CompileRegex)
-                    {
-                        //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
-                        matchOnWindows = Regex.IsMatch(tmpResult, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
-                    }
-                    else 
-                    {
-                        matchOnWindows = Regex.IsMatch(tmpResult, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-                    }
-
-                    if (!matchOnWindows)
-                    {
-                        throw new Exception("Filename is NOT a valid Windows filename.");
-                    }
-
-                    //now check for dot and file extensions after having already normalized, etc.
-                    string[] arrayOfStr = tmpResult.Split('.');
-                    string fileExtensionWithoutTheDot = arrayOfStr[arrayOfStr.Length - 1];
-                    string tmpResultFileExtension = "." + fileExtensionWithoutTheDot;
-
-                    if (optionalWhiteListFileExtension != null) //compare exclusive here
-                    {
-                        //If a allowedList file extension was NOT provided and matched then throw an exception.
-                        if (!String.Equals(optionalWhiteListFileExtension, tmpResultFileExtension, StringComparison.OrdinalIgnoreCase))
-                        {
-                            throw new Exception("Filename extension fails to match the allowedList file extension.");
-                        }
-                    }
-                    else 
-                    {
-                        //If no allowedList file extension was provided and if restrictedList options were flagged true, apply the restrictedLists                        
-                        if (disallowExecutableExtensions && ContainsExecutableExtensions(ref tmpResult))
-                        {
-                            throw new Exception("Filename contains common executable extensions.");
-                        }
-
-                        if (disallowWebExtensions && ContainsWebExtensions(ref tmpResult))
-                        {
-                            throw new Exception("Filename contains common web extensions.");
-                        }
-                        
-                        if (disallowOfficeMacroExtensions && ContainsOfficeMacroExtensions(ref tmpResult))
-                        {
-                            throw new Exception("Filename contains office file extensions.");
-                        }
-
-                        if (disallowPDFFileExtensions && ContainsPDFFileExtensions(ref tmpResult))
-                        {
-                            throw new Exception("Filename contains PDF file extensions.");
-                        }
-
-                        if (disallowMediaFileExtensions && ContainsMediaFileExtensions(ref tmpResult))
-                        {
-                            throw new Exception("Filename contains Media file extensions.");
-                        }                        
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "FileNameCleanse: ", "Error sanitizing via Regex using ASCII: ", tmpResult, ex);
+                TruncateLength = 15;
+                SaniType = SaniTypes.FileNameCleanse;
             }
 
-            return tmpResult;
+            /// <summary>
+            /// Sanitize FileName Via Regex.
+            /// SOURCE: https://stackoverflow.com/questions/11794144/regular-expression-for-valid-filename
+            /// SOURCE: https://stackoverflow.com/questions/6730009/validate-a-file-name-on-windows
+            /// SOURCE: https://stackoverflow.com/questions/62771/how-do-i-check-if-a-given-string-is-a-legal-valid-file-name-under-windows#62855
+            /// </summary>
+            /// <param name="strToClean"></param>
+            /// <returns></returns>   
+            public string SanitizeViaRegex(string filename, int maxLength, bool disallowMoreThanOneDot, string optionalWhiteListFileExtension, bool disallowExecutableExtensions, bool disallowWebExtensions, bool disallowOfficeMacroExtensions, bool disallowPDFFileExtensions, bool disallowMediaFileExtensions)
+            {
+                string tmpResult = String.Empty;
+
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(filename))
+                    {
+                        throw new Exception("Filename cannot be null or empty.");
+                    }
+                    else
+                    {
+                        tmpResult = SaniCore.Truncate.ToValidLength(filename, maxLength);
+
+                        //check for malicious Unicode prior to normalizing and reducing to ASCII-like characters
+                        if (ContainsMaliciousCharacters(ref tmpResult))
+                        {
+                            throw new Exception("Filename contains potentially malicious characters.");
+                        }
+
+                        //normalize prior to checking for dot characters to prevent unicode characters similar to dot
+                        tmpResult = SaniCore.NormalizeOrLimit.ToASCIIOnly(tmpResult);
+
+                        //check for dot characters
+                        char dot = '.';
+                        int count = 0;
+                        foreach (char letter in tmpResult)
+                            if (letter == dot) count++;
+
+                        if (disallowMoreThanOneDot)
+                        {
+                            if (count > 1)
+                            {
+                                throw new Exception("Filename contains more than one dot character.");
+                            }
+                        }
+
+                        if (count == 0)
+                        {
+                            throw new Exception("Filename does NOT contain at least one dot character.");
+                        }
+
+                        //now apply the regex check after having already normalized the unicode string and reduced it to ASCII-like characters.
+                        //This regex will disallow invalid characters within a filename such as ? * : " < > ; | \ / and will not allow a trailing space or dot.
+                        string regex2 = @"^(?!^(PRN|AUX|CLOCK\$|NUL|CON|COM\d|LPT\d|\..*)(\..+)?$)[^\x00-\x1f\\?*:\""<>;|\/]+[^*\x00-\x1F\ .]$";
+
+                        bool matchOnWindows = false;
+                        if (SaniCore.CompileRegex)
+                        {
+                            //May cause build to be slower but runtime Regex to be faster . . . let developer choose.
+                            matchOnWindows = Regex.IsMatch(tmpResult, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+                        }
+                        else
+                        {
+                            matchOnWindows = Regex.IsMatch(tmpResult, regex2, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                        }
+
+                        if (!matchOnWindows)
+                        {
+                            throw new Exception("Filename is NOT a valid Windows filename.");
+                        }
+
+                        //now check for dot and file extensions after having already normalized, etc.
+                        string[] arrayOfStr = tmpResult.Split('.');
+                        string fileExtensionWithoutTheDot = arrayOfStr[arrayOfStr.Length - 1];
+                        string tmpResultFileExtension = "." + fileExtensionWithoutTheDot;
+
+                        if (optionalWhiteListFileExtension != null) //compare exclusive here
+                        {
+                            //If a allowedList file extension was NOT provided and matched then throw an exception.
+                            if (!String.Equals(optionalWhiteListFileExtension, tmpResultFileExtension, StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new Exception("Filename extension fails to match the allowedList file extension.");
+                            }
+                        }
+                        else
+                        {
+                            //If no allowedList file extension was provided and if restrictedList options were flagged true, apply the restrictedLists                        
+                            if (disallowExecutableExtensions && ContainsExecutableExtensions(ref tmpResult))
+                            {
+                                throw new Exception("Filename contains common executable extensions.");
+                            }
+
+                            if (disallowWebExtensions && ContainsWebExtensions(ref tmpResult))
+                            {
+                                throw new Exception("Filename contains common web extensions.");
+                            }
+
+                            if (disallowOfficeMacroExtensions && ContainsOfficeMacroExtensions(ref tmpResult))
+                            {
+                                throw new Exception("Filename contains office file extensions.");
+                            }
+
+                            if (disallowPDFFileExtensions && ContainsPDFFileExtensions(ref tmpResult))
+                            {
+                                throw new Exception("Filename contains PDF file extensions.");
+                            }
+
+                            if (disallowMediaFileExtensions && ContainsMediaFileExtensions(ref tmpResult))
+                            {
+                                throw new Exception("Filename contains Media file extensions.");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    SaniExceptionHandler.TrackOrThrowException(TruncateLength, SaniType, SaniCore, "FileNameCleanse: ", "Error sanitizing via Regex using ASCII: ", tmpResult, ex);
+                }
+
+                return tmpResult;
+            }
         }
 
         private static bool ContainsMaliciousCharacters(ref string tmpResult)
@@ -270,6 +290,7 @@ namespace ModestSanitizer
 
             return (finalLength < initialLength);
         }
+
         private static bool ContainsOfficeMacroExtensions(ref string tmpResult)
         {
             StringComparison ic = StringComparison.OrdinalIgnoreCase;

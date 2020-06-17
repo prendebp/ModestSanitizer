@@ -325,13 +325,13 @@ namespace ModestSanitizerUnitTests
 
                 bool checkForStandardHexRestrictedListChars = false;
 
-                bool? result1 = sanitizer.RestrictedList.ReviewIgnoreCaseUsingASCII(ref hexValue, plainTextRestrictedList, 225, checkForStandardHexRestrictedListChars, false);
+                bool? result1 = sanitizer.RestrictedList.ASCII.ReviewIgnoreCase(ref hexValue, plainTextRestrictedList, 225, checkForStandardHexRestrictedListChars, false);
 
                 Assert.AreEqual(false, result1); //no match since NOT checking for standard hex characters in the restrictedList
 
                 checkForStandardHexRestrictedListChars = true;
 
-                bool? result2 = sanitizer.RestrictedList.ReviewIgnoreCaseUsingASCII(ref hexValue, plainTextRestrictedList, 225, checkForStandardHexRestrictedListChars, true);
+                bool? result2 = sanitizer.RestrictedList.ASCII.ReviewIgnoreCase(ref hexValue, plainTextRestrictedList, 225, checkForStandardHexRestrictedListChars, true);
 
                 Assert.AreEqual(true, result2); //match true on hex char \x since bool to check for standard hex restrictedList chars was set to true.
             }
@@ -359,7 +359,7 @@ namespace ModestSanitizerUnitTests
 
                 bool checkForCommonMaliciousChars = false;
 
-                bool? result3 = sanitizer.RestrictedList.ReviewIgnoreCaseUsingASCII(ref stringWithNullByte, plainTextRestrictedList, 225, false, checkForCommonMaliciousChars);
+                bool? result3 = sanitizer.RestrictedList.ASCII.ReviewIgnoreCase(ref stringWithNullByte, plainTextRestrictedList, 225, false, checkForCommonMaliciousChars);
 
                 Assert.AreEqual(false, result3); //this line will never be reached since SanitizerException thrown since restrictedList matched.
             }
@@ -386,7 +386,7 @@ namespace ModestSanitizerUnitTests
 
                 bool checkForCommonMaliciousCharsTrue = true; //let's check for common malicious characters this time
 
-                bool? result4 = sanitizer.RestrictedList.ReviewIgnoreCaseUsingASCII(ref stringWithNullByteAgain, plainTextRestrictedList2, 225, true, checkForCommonMaliciousCharsTrue);
+                bool? result4 = sanitizer.RestrictedList.ASCII.ReviewIgnoreCase(ref stringWithNullByteAgain, plainTextRestrictedList2, 225, true, checkForCommonMaliciousCharsTrue);
 
                 Assert.AreEqual(true, result4); //match true on null byte %00 since bool to check for common malicious characters restrictedList was set to true.
 
@@ -409,7 +409,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //This will first limit the stringToCheckRegex to ASCII characters and only then try to match to the Regex.
-                bool? resultRegex = sanitizer.RestrictedList.ReviewRegexUsingASCII(ref stringToCheckRegex, disallowedRegex, 225);
+                bool? resultRegex = sanitizer.RestrictedList.ASCII.ReviewViaRegex(ref stringToCheckRegex, disallowedRegex, 225);
             }
             catch (SanitizerException se)
             {
@@ -533,7 +533,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #1 - test potentially malicious non-breaking space \u00A0 character
-                string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secretdoc \u00A0.pdf", 20, true, ".pdf",false,false,false,false,false);
+                string result = sanitizer.FileNameCleanse.ASCII.SanitizeViaRegex("secretdoc \u00A0.pdf", 20, true, ".pdf",false,false,false,false,false);
             }
             catch (SanitizerException se)
             {
@@ -549,7 +549,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #2 - throw exception due to trailing dot
-                string result = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("my presentationpptx.", 21, false, null, true, false, false, false, false);
+                string result = sanitizer.FileNameCleanse.ASCII.SanitizeViaRegex("my presentationpptx.", 21, false, null, true, false, false, false, false);
             }
             catch (SanitizerException se)
             {
@@ -565,7 +565,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #3 - throw exception for more than one dot
-                sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("secret.doc .pdf", 20, true, ".pdf", false, false, false, false, false);
+                sanitizer.FileNameCleanse.ASCII.SanitizeViaRegex("secret.doc .pdf", 20, true, ".pdf", false, false, false, false, false);
             }
             catch (SanitizerException se)
             {
@@ -579,11 +579,11 @@ namespace ModestSanitizerUnitTests
             wasExceptionThrown = false; //re-set flag
 
             //Test #4 - green case - valid filename
-            string result4 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("my.report.05-29-2020.pdf", 25, false, ".pdf", false, false, false, false, false);
+            string result4 = sanitizer.FileNameCleanse.ASCII.SanitizeViaRegex("my.report.05-29-2020.pdf", 25, false, ".pdf", false, false, false, false, false);
             Assert.AreEqual("my.report.05-29-2020.pdf", result4);
 
             //Test #5 - green case - valid filename - chopping off date
-            string result5 = sanitizer.FileNameCleanse.SanitizeViaRegexUsingASCII("  myfile.txt05-29-2020", 12, false, ".txt", false, false, false, false, false);
+            string result5 = sanitizer.FileNameCleanse.ASCII.SanitizeViaRegex("  myfile.txt05-29-2020", 12, false, ".txt", false, false, false, false, false);
             Assert.AreEqual("  myfile.txt", result5);
 
             sanitizer.ClearSaniExceptions();
@@ -593,7 +593,7 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #6 - should track exception for no file extension
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(null, 50, false, null, true, true, true, true, true);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex(null, 50, false, null, true, true, true, true, true);
             }
             catch (SanitizerException)
             {
@@ -613,21 +613,21 @@ namespace ModestSanitizerUnitTests
             try
             {
                 //Test #7 - should track exception for bad file extensions
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("9999999999999999999999999", 50, false, null, true, true, true, true, true);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".", 50, false, null, true, true, true, true, true);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".pp.tx", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII(".pptx", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("?.pptx", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("a/abc.pptx", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("a\\abc.pptx", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("c:abc.pptx", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("c<abc.pptx", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("CON.pptx", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("test \"escape\".txt", 50, false, null, false, false, false, false, false);
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("C:\\My Folder <test>.\\", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("9999999999999999999999999", 50, false, null, true, true, true, true, true);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex(".", 50, false, null, true, true, true, true, true);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex(".pp.tx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex(".pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("?.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("a/abc.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("a\\abc.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("c:abc.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("c<abc.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("CON.pptx", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("test \"escape\".txt", 50, false, null, false, false, false, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("C:\\My Folder <test>.\\", 50, false, null, false, false, false, false, false);
 
                 //test restrictedList for Office files - set disallow to true
-                sanitizer2.FileNameCleanse.SanitizeViaRegexUsingASCII("abc.docx", 50, false, null, false, false, true, false, false);
+                sanitizer2.FileNameCleanse.ASCII.SanitizeViaRegex("abc.docx", 50, false, null, false, false, true, false, false);
             }
             catch (SanitizerException)
             {
